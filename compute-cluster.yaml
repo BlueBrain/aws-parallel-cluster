@@ -1,0 +1,37 @@
+Region: us-east-1
+Image:
+  Os: alinux2
+HeadNode:
+  InstanceType: t3.micro
+  Networking:
+    SubnetId: compute
+    SecurityGroups:
+    - hpc
+  Ssh:
+    KeyName: dries-mac-bbp-key
+Scheduling:
+  Scheduler: slurm
+  SlurmQueues:
+  - Name: prod
+    AllocationStrategy: lowest-price
+    ComputeResources:
+    - Name: t3micro
+      Instances:
+      - InstanceType: t3.micro
+      MinCount: 0
+      MaxCount: 8
+    Networking:
+      SubnetIds:
+      - compute
+    SecurityGroups:
+    - hpc
+  SlurmSettings:
+    EnableMemoryBasedScheduling: true
+Imds:
+  ImdsSupport: v2.0
+SharedStorage:
+  - Name: Efs0
+    StorageType: Efs
+    MountDir: /compute-efs
+    EfsSettings:
+      FileSystemId: compute_efs
