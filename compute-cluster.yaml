@@ -4,11 +4,11 @@ Image:
 HeadNode:
   InstanceType: t3.micro
   Networking:
-    SubnetId: compute
+    SubnetId: subnet-076ece71c00742d3c # compute
     SecurityGroups:
-    - hpc
+    - sg-0b5941ba4f4d1a9ff # sbo-poc-compute / hpc
   Ssh:
-    KeyName: dries-mac-bbp-key
+    KeyName: aws_coreservices
 Scheduling:
   Scheduler: slurm
   SlurmQueues:
@@ -22,9 +22,9 @@ Scheduling:
       MaxCount: 8
     Networking:
       SubnetIds:
-      - compute
-    SecurityGroups:
-    - hpc
+      - subnet-076ece71c00742d3c # compute
+      SecurityGroups:
+      - sg-0b5941ba4f4d1a9ff # sbo-poc-compute / hpc
   SlurmSettings:
     EnableMemoryBasedScheduling: true
 Imds:
@@ -34,4 +34,4 @@ SharedStorage:
     StorageType: Efs
     MountDir: /compute-efs
     EfsSettings:
-      FileSystemId: compute_efs
+      FileSystemId: fs-0c2a2f3ad1b1beeca # sbo-poc-compute

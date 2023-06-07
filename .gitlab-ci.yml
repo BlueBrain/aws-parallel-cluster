@@ -1,0 +1,53 @@
+stages:
+ - start
+ - deploy
+
+.pcluster:
+  image: public.ecr.aws/parallelcluster/pcluster-api:3.6.0
+  before_script:
+    - mkdir -p ~/.aws/
+    - echo -e "[default]\naws_access_key_id = ${AWS_ACCESS_KEY}\naws_secret_access_key = ${AWS_SECRET_ACCESS_KEY}\n" > ~/.aws/credentials
+
+# the update/create commands always return with an error code when you use --dryrun true, even when the validation succeeded and there are no errors => parsing the output afterwards
+validate:
+  stage: start
+  extends: .pcluster
+  script:
+    - pcluster list-clusters --region us-east-1
+    - pcluster list-clusters --region us-east-1 | (if grep -q hpc-cluster ; then echo "Updating existing cluster"; pcluster update-cluster --cluster-configuration compute-cluster.yaml --cluster-name hpc-cluster --region us-east-1 --dryrun true; else echo "Creating new cluster"; pcluster create-cluster --cluster-configuration compute-cluster.yaml --cluster-name hpc-cluster --region us-east-1 --dryrun true; fi) >> /pcluster-output 2>&1 || echo "ok"
+    - cat /pcluster-output
+    - cat /pcluster-output | grep -q "Request would have succeeded, but DryRun flag is set"
+    - pcluster list-clusters --region us-east-1 | if grep -q hpc-cluster; then pcluster describe-cluster --region us-east-1 --cluster-name hpc-cluster; fi
+
+deploy:
+  stage: deploy
+  extends: .pcluster
+  script:
+    - pcluster list-clusters --region us-east-1 | if grep -q hpc-cluster ; then echo "Updating existing cluster"; pcluster update-cluster --cluster-configuration compute-cluster.yaml --cluster-name hpc-cluster --region us-east-1 --dryrun false; else echo "Creating new cluster"; pcluster create-cluster --cluster-configuration compute-cluster.yaml --cluster-name hpc-cluster --region us-east-1 --dryrun false; fi
+    - pcluster describe-cluster --region us-east-1 --cluster-name hpc-cluster
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+destroy:
+  stage: start
+  extends: .pcluster
+  when: manual
+  allow_failure: true
+  script:
+    - pcluster delete-cluster --cluster-name hpc-cluster --region us-east-1
+
+print_info:
+  stage: start
+  extends: .pcluster
+  when: manual
+  allow_failure: true
+  script:
+    - pcluster version
+    - pcluster list-clusters --region us-east-1
+    - pcluster list-images --region us-east-1 --image-status AVAILABLE
+    - pcluster list-images --region us-east-1 --image-status PENDING
+    - pcluster list-images --region us-east-1 --image-status FAILED
+    - pcluster list-official-images --region us-east-1
+    - pcluster list-clusters --region us-east-1
+    - pcluster list-clusters --region us-east-1 | if grep -q hpc-cluster ; then pcluster describe-cluster --region us-east-1 --cluster-name hpc-cluster
+    - pcluster -h
