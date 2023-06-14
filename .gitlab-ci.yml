@@ -1,12 +1,21 @@
 stages:
+ - info
  - start
  - deploy
+
+.aws-cli:
+  image: public.ecr.aws/aws-cli/aws-cli:2.11.27
+  before_script:
+    - mkdir -p ~/.aws/
+    - echo -e "[default]\naws_access_key_id = ${AWS_ACCESS_KEY}\naws_secret_access_key = ${AWS_SECRET_ACCESS_KEY}\n" > ~/.aws/credentials
+    - echo -e "[default]\nregion = us-east-1\noutput = json\n" > ~/.aws/config
 
 .pcluster:
   image: public.ecr.aws/parallelcluster/pcluster-api:3.6.0
   before_script:
     - mkdir -p ~/.aws/
     - echo -e "[default]\naws_access_key_id = ${AWS_ACCESS_KEY}\naws_secret_access_key = ${AWS_SECRET_ACCESS_KEY}\n" > ~/.aws/credentials
+    - echo -e "[default]\nregion = us-east-1\noutput = json\n" > ~/.aws/config
 
 # the update/create commands always return with an error code when you use --dryrun true, even when the validation succeeded and there are no errors => parsing the output afterwards
 validate:
@@ -16,7 +25,7 @@ validate:
     - pcluster list-clusters --region us-east-1
     - pcluster list-clusters --region us-east-1 | (if grep -q hpc-cluster ; then echo "Updating existing cluster"; pcluster update-cluster --cluster-configuration compute-cluster.yaml --cluster-name hpc-cluster --region us-east-1 --dryrun true; else echo "Creating new cluster"; pcluster create-cluster --cluster-configuration compute-cluster.yaml --cluster-name hpc-cluster --region us-east-1 --dryrun true; fi) >> /pcluster-output 2>&1 || echo "ok"
     - cat /pcluster-output
-    - cat /pcluster-output | grep -q "Request would have succeeded, but DryRun flag is set"
+    - cat /pcluster-output | grep -q "Request would have succeeded, but DryRun flag is set\|No changes found"
     - pcluster list-clusters --region us-east-1 | if grep -q hpc-cluster; then pcluster describe-cluster --region us-east-1 --cluster-name hpc-cluster; fi
 
 deploy:
@@ -37,7 +46,7 @@ destroy:
     - pcluster delete-cluster --cluster-name hpc-cluster --region us-east-1
 
 print_info:
-  stage: start
+  stage: info
   extends: .pcluster
   when: manual
   allow_failure: true
@@ -51,3 +60,61 @@ print_info:
     - pcluster list-clusters --region us-east-1
     - pcluster list-clusters --region us-east-1 | if grep -q hpc-cluster ; then pcluster describe-cluster --region us-east-1 --cluster-name hpc-cluster; fi
     - pcluster -h
+
+update_components:
+  stage: deploy
+  extends: .aws-cli
+  when: manual
+  script:
+    - aws s3 cp ./singularity_component.yaml s3://sboimagebuildercomponents/components/
+    - aws imagebuilder create-component --name install-singularity-ce --semantic-version "1.0.2" --change-description "Inital version" --platform "Linux" --uri "s3://sboimagebuildercomponents/components/singularity_component.yaml"
+
+print_components:
+  stage: info
+  extends: .aws-cli
+  when: manual
+  script:
+    - aws imagebuilder list-components --owner Self
+
+build_image:
+  stage: deploy
+  extends: .pcluster
+  when: manual
+  script:
+    - pcluster build-image --image-configuration custom_al2_ami_config.yaml --image-id alinux2-sbo-pcluster-image
+    - pcluster list-images --image-status PENDING
+
+build_image_status:
+  stage: info
+  extends: .pcluster
+  when: manual
+  script:
+    - pcluster list-images --image-status PENDING
+
+print_images:
+  stage: info
+  extends: .pcluster
+  when: manual
+  script:
+    - pcluster list-images --image-status AVAILABLE
+
+delete_cloudformation_stack:
+  stage: info
+  extends: .aws-cli
+  when: manual
+  script:
+    - aws cloudformation list-stacks
+    - aws cloudformation delete-stack --stack-name alinux2-sbo-pcluster-image
+    - aws cloudformation list-stacks
+
+debug_image:
+  stage: info
+  extends: .pcluster
+  when: manual
+  script:
+    - pcluster describe-image --image-id alinux2-sbo-pcluster-image
+    - pcluster list-image-log-streams --image-id alinux2-sbo-pcluster-image --query 'logStreams[*].logStreamName'
+    - pcluster get-image-log-events --image-id alinux2-sbo-pcluster-image --log-stream-name 3.6.0/1 | tee build_log.json
+  artifacts:
+    paths:
+      - build_log.json

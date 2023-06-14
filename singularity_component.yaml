@@ -1,0 +1,29 @@
+name: install-singularity-ce
+description: Install Singularity CE
+schemaVersion: 1.0
+parameters:
+  - SingularityVersion:
+      type: string
+      default: "3.11.3-1.el7"
+      description: The version of singularity to install
+phases:
+  - name: build
+    steps:
+     - name: InstallPackage
+       action: ExecuteBash
+       inputs:
+         commands:
+           - |
+             # download and install package file
+             PACKAGE="singularity-ce-{{ SingularityVersion }}.x86_64.rpm"
+             VERSION="v$(echo "{{ SingularityVersion }}" | cut -d "-" -f 1)"
+             wget --no-verbose "https://github.com/sylabs/singularity/releases/download/${VERSION}/${PACKAGE}"
+             yum install -y ${PACKAGE}
+  - name: test
+    steps:
+      - name: TestSingularity
+        action: ExecuteBash
+        inputs:
+          commands:
+            - which singularity && singularity --version | grep "{{ SingularityVersion }}" -q
+

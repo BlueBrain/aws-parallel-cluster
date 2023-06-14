@@ -1,6 +1,7 @@
 Region: us-east-1
 Image:
   Os: alinux2
+  CustomAmi: ami-0e8b5c9c57551fe78
 HeadNode:
   InstanceType: t3.micro
   Networking:
