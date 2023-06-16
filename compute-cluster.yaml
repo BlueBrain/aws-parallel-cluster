@@ -10,6 +10,9 @@ HeadNode:
     - sg-0b5941ba4f4d1a9ff # sbo-poc-compute / hpc
   Ssh:
     KeyName: aws_coreservices
+  Iam:
+    S3Access:
+      - BucketName: sboinfrastructureassets
 Scheduling:
   Scheduler: slurm
   SlurmQueues:
