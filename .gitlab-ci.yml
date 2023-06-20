@@ -34,6 +34,7 @@ deploy:
   script:
     - pcluster list-clusters --region us-east-1 | if grep -q hpc-cluster ; then echo "Updating existing cluster"; pcluster update-cluster --cluster-configuration compute-cluster.yaml --cluster-name hpc-cluster --region us-east-1 --dryrun false; else echo "Creating new cluster"; pcluster create-cluster --cluster-configuration compute-cluster.yaml --cluster-name hpc-cluster --region us-east-1 --dryrun false; fi
     - pcluster describe-cluster --region us-east-1 --cluster-name hpc-cluster
+    - bash update_dns_record.sh
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
