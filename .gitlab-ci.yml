@@ -59,15 +59,14 @@ print_info:
     - pcluster list-official-images --region us-east-1
     - pcluster list-clusters --region us-east-1
     - pcluster list-clusters --region us-east-1 | if grep -q hpc-cluster ; then pcluster describe-cluster --region us-east-1 --cluster-name hpc-cluster; fi
-    - pcluster -h
 
 update_components:
   stage: deploy
   extends: .aws-cli
   when: manual
   script:
-    - aws s3 cp ./singularity_component.yaml s3://sboimagebuildercomponents/components/
-    - aws imagebuilder create-component --name install-singularity-ce --semantic-version "1.0.2" --change-description "Inital version" --platform "Linux" --uri "s3://sboimagebuildercomponents/components/singularity_component.yaml"
+    - aws s3 cp ./efs_component.yaml s3://sboinfrastructureassets/components/
+    - aws imagebuilder create-component --name compute-efs --semantic-version "1.0.3" --change-description "Improve error handling" --platform "Linux" --uri "s3://sboinfrastructureassets/components/efs_component.yaml"
 
 print_components:
   stage: info
@@ -81,8 +80,15 @@ build_image:
   extends: .pcluster
   when: manual
   script:
-    - pcluster build-image --image-configuration custom_al2_ami_config.yaml --image-id alinux2-sbo-pcluster-image
+    - pcluster build-image --image-configuration custom_al2_ami_config.yaml --image-id alinux2-sbo-pcluster-v1
     - pcluster list-images --image-status PENDING
+
+delete_image:
+  stage: deploy
+  extends: .pcluster
+  when: manual
+  script:
+    - pcluster delete-image  --image-id alinux2-sbo-pcluster-image
 
 build_image_status:
   stage: info
@@ -104,7 +110,7 @@ delete_cloudformation_stack:
   when: manual
   script:
     - aws cloudformation list-stacks
-    - aws cloudformation delete-stack --stack-name alinux2-sbo-pcluster-image
+    - aws cloudformation delete-stack --stack-name alinux2-sbo-pcluster-v1
     - aws cloudformation list-stacks
 
 debug_image:
@@ -112,9 +118,9 @@ debug_image:
   extends: .pcluster
   when: manual
   script:
-    - pcluster describe-image --image-id alinux2-sbo-pcluster-image
-    - pcluster list-image-log-streams --image-id alinux2-sbo-pcluster-image --query 'logStreams[*].logStreamName'
-    - pcluster get-image-log-events --image-id alinux2-sbo-pcluster-image --log-stream-name 3.6.0/1 | tee build_log.json
+    - pcluster describe-image --image-id alinux2-sbo-pcluster-v1
+    - pcluster list-image-log-streams --image-id alinux2-sbo-pcluster-v1 --query 'logStreams[*].logStreamName'
+    - pcluster get-image-log-events --image-id alinux2-sbo-pcluster-v1 --log-stream-name 3.6.0/1 | tee build_log.json
   artifacts:
     paths:
       - build_log.json

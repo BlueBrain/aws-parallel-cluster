@@ -10,3 +10,5 @@ Build:
   Components:
     - Type: arn
       Value: arn:aws:imagebuilder:us-east-1:671250183987:component/install-singularity-ce/1.0.2/1
+    - Type: arn
+      Value: arn:aws:imagebuilder:us-east-1:671250183987:component/compute-efs/1.0.2/1
