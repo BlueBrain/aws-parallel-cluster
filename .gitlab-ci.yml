@@ -22,27 +22,38 @@ validate:
   stage: start
   extends: .pcluster
   script:
-    - pcluster list-clusters --region us-east-1
-    - pcluster list-clusters --region us-east-1 | (if grep -q hpc-cluster ; then echo "Updating existing cluster"; pcluster update-cluster --cluster-configuration compute-cluster.yaml --cluster-name hpc-cluster --region us-east-1 --dryrun true; else echo "Creating new cluster"; pcluster create-cluster --cluster-configuration compute-cluster.yaml --cluster-name hpc-cluster --region us-east-1 --dryrun true; fi) >> /pcluster-output 2>&1 || echo "ok"
+    - pcluster list-clusters
+    - pcluster list-clusters | (if grep -q hpc-cluster ; then echo "Updating existing cluster"; pcluster update-cluster --cluster-configuration compute-cluster.yaml --cluster-name hpc-cluster --dryrun true; else echo "Creating new cluster"; pcluster create-cluster --cluster-configuration compute-cluster.yaml --cluster-name hpc-cluster --dryrun true; fi) >> /pcluster-output 2>&1 || echo "ok"
     - cat /pcluster-output
     - cat /pcluster-output | grep -q "Request would have succeeded, but DryRun flag is set\|No changes found"
-    - pcluster list-clusters --region us-east-1 | if grep -q hpc-cluster; then pcluster describe-cluster --region us-east-1 --cluster-name hpc-cluster; fi
+    - pcluster list-clusters | if grep -q hpc-cluster; then pcluster describe-cluster --cluster-name hpc-cluster; fi
 
 deploy:
   stage: deploy
   extends: .pcluster
   script:
-    - pcluster list-clusters --region us-east-1 | if grep -q hpc-cluster ; then echo "Updating existing cluster"; pcluster update-cluster --cluster-configuration compute-cluster.yaml --cluster-name hpc-cluster --region us-east-1 --dryrun false; else echo "Creating new cluster"; pcluster create-cluster --cluster-configuration compute-cluster.yaml --cluster-name hpc-cluster --region us-east-1 --dryrun false; fi
-    - pcluster describe-cluster --region us-east-1 --cluster-name hpc-cluster
+    - pcluster list-clusters | if grep -q hpc-cluster ; then echo "Updating existing cluster"; pcluster update-cluster --cluster-configuration compute-cluster.yaml --cluster-name hpc-cluster --dryrun false; else echo "Creating new cluster"; pcluster create-cluster --cluster-configuration compute-cluster.yaml --cluster-name hpc-cluster --dryrun false; fi
+    - pcluster describe-cluster --cluster-name hpc-cluster
     - bash update_dns_record.sh
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+update_dns_record:
+  stage: deploy
+  extends: .pcluster
+  needs:
+    - deploy
+  script:
+    - bash update_dns_record.sh
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
 
 push_scripts:
   stage: deploy
   extends: .aws-cli
   script:
-    - aws s3 cp ./create_users.py s3://sboinfrastructureassets/scripts/ --recursive
+    - aws s3 cp ./create_users.py s3://sboinfrastructureassets/scripts/
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
       changes:
@@ -54,7 +65,7 @@ destroy:
   when: manual
   allow_failure: true
   script:
-    - pcluster delete-cluster --cluster-name hpc-cluster --region us-east-1
+    - pcluster delete-cluster --cluster-name hpc-cluster
 
 print_info:
   stage: info
@@ -63,13 +74,12 @@ print_info:
   allow_failure: true
   script:
     - pcluster version
-    - pcluster list-clusters --region us-east-1
-    - pcluster list-images --region us-east-1 --image-status AVAILABLE
-    - pcluster list-images --region us-east-1 --image-status PENDING
-    - pcluster list-images --region us-east-1 --image-status FAILED
-    - pcluster list-official-images --region us-east-1
-    - pcluster list-clusters --region us-east-1
-    - pcluster list-clusters --region us-east-1 | if grep -q hpc-cluster ; then pcluster describe-cluster --region us-east-1 --cluster-name hpc-cluster; fi
+    - pcluster list-official-images
+    - pcluster list-images --image-status AVAILABLE
+    - pcluster list-images --image-status PENDING
+    - pcluster list-images --image-status FAILED
+    - pcluster list-clusters
+    - pcluster list-clusters | if grep -q hpc-cluster ; then pcluster describe-cluster --region us-east-1 --cluster-name hpc-cluster; fi
 
 update_components:
   stage: deploy
@@ -107,13 +117,6 @@ build_image_status:
   when: manual
   script:
     - pcluster list-images --image-status PENDING
-
-print_images:
-  stage: info
-  extends: .pcluster
-  when: manual
-  script:
-    - pcluster list-images --image-status AVAILABLE
 
 delete_cloudformation_stack:
   stage: info

@@ -5,26 +5,26 @@ yum install -y unzip jq
 
 # Make sure the cluster is ready
 echo "Checking if the cluster is ready"
-cluster_status=$(pcluster describe-cluster --region us-east-1 -n hpc-cluster | jq -r .clusterStatus)
+cluster_status=$(pcluster describe-cluster -n hpc-cluster | jq -r .clusterStatus)
 while [ "$cluster_status" != "CREATE_COMPLETE" ]
 do 
     echo "Cluster is not yet ready, status is ${cluster_status}"
     sleep 5s
-    cluster_status=$(pcluster describe-cluster --region us-east-1 -n hpc-cluster | jq -r .clusterStatus)
+    cluster_status=$(pcluster describe-cluster -n hpc-cluster | jq -r .clusterStatus)
 done
 echo "The cluster is ready"
 
 # Install the aws cli
 curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-unzip awscliv2.zip
-sudo ./aws/install
+unzip -q awscliv2.zip
+./aws/install
 
 # Get the ID of the dns zone
 zone_id=$(aws route53 list-hosted-zones-by-name | jq -r '.HostedZones[] | select(.Name=="shapes-registry.org.") | .Id')
 echo "Zone id: ${zone_id}"
 
 # Get the ip address of the head node
-ip_address=$(pcluster describe-cluster --region us-east-1 -n hpc-cluster | jq -r .headNode.privateIpAddress)
+ip_address=$(pcluster describe-cluster -n hpc-cluster | jq -r .headNode.privateIpAddress)
 echo "Ip address: ${ip_address}"
 
 # name of the dns record
