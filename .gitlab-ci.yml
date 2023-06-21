@@ -38,6 +38,16 @@ deploy:
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
+push_scripts:
+  stage: deploy
+  extends: .aws-cli
+  script:
+    - aws s3 cp ./create_users.py s3://sboinfrastructureassets/scripts/ --recursive
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes:
+        - create_users.py
+
 destroy:
   stage: start
   extends: .pcluster

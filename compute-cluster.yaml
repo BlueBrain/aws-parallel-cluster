@@ -13,6 +13,12 @@ HeadNode:
   Iam:
     S3Access:
       - BucketName: sboinfrastructureassets
+  CustomActions:
+    OnNodeStart:
+      Sequence:
+        - Script: s3://sboinfrastructureassets/scripts/create_users.py
+          Args:
+            - /compute-efs/users.json
 Scheduling:
   Scheduler: slurm
   SlurmQueues:
@@ -29,6 +35,12 @@ Scheduling:
       - subnet-076ece71c00742d3c # compute
       SecurityGroups:
       - sg-0b5941ba4f4d1a9ff # sbo-poc-compute / hpc
+    CustomActions:
+      OnNodeStart:
+        Sequence:
+          - Script: s3://sboinfrastructureassets/scripts/create_users.py
+            Args:
+              - /compute-efs/users.json
   SlurmSettings:
     EnableMemoryBasedScheduling: true
 Imds:
