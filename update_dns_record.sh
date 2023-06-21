@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # To be used within that pcluster image: expects pcluster to work, with aws credentials configured
+yum install -y unzip jq
 
 # Make sure the cluster is ready
 echo "Checking if the cluster is ready"
@@ -14,7 +15,6 @@ done
 echo "The cluster is ready"
 
 # Install the aws cli
-yum install -y yq unzip
 curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
 unzip awscliv2.zip
 sudo ./aws/install
