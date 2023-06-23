@@ -17,24 +17,59 @@ stages:
     - echo -e "[default]\naws_access_key_id = ${AWS_ACCESS_KEY}\naws_secret_access_key = ${AWS_SECRET_ACCESS_KEY}\n" > ~/.aws/credentials
     - echo -e "[default]\nregion = us-east-1\noutput = json\n" > ~/.aws/config
 
-# the update/create commands always return with an error code when you use --dryrun true, even when the validation succeeded and there are no errors => parsing the output afterwards
-validate:
-  stage: start
+.update_or_create_cluster:
   extends: .pcluster
   script:
     - pcluster list-clusters
-    - pcluster list-clusters | (if grep -q hpc-cluster ; then echo "Updating existing cluster"; pcluster update-cluster --cluster-configuration compute-cluster.yaml --cluster-name hpc-cluster --dryrun true; else echo "Creating new cluster"; pcluster create-cluster --cluster-configuration compute-cluster.yaml --cluster-name hpc-cluster --dryrun true; fi) >> /pcluster-output 2>&1 || echo "ok"
-    - cat /pcluster-output
-    - cat /pcluster-output | grep -q "Request would have succeeded, but DryRun flag is set\|No changes found"
-    - pcluster list-clusters | if grep -q hpc-cluster; then pcluster describe-cluster --cluster-name hpc-cluster; fi
+    - |
+      if $(pcluster list-clusters | grep -q hpc-cluster); then
+          echo "Cluster exists, will attempt to update."
+          echo -n "Checking fleet status: "
+          fleet_status=$(pcluster describe-compute-fleet --cluster-name hpc-cluster --query status)
+          if [[ "$fleet_status" != *"STOPPED"* ]]; then
+              echo "$fleet_status. Stopping fleet."
+              pcluster update-compute-fleet --cluster-name hpc-cluster --status STOP_REQUESTED
+              fleet_status=$(pcluster describe-compute-fleet --cluster-name hpc-cluster --query status)
+              while [[ "$fleet_status" != *"STOPPED"* ]]; do
+                  sleep 5
+                  echo "Waiting for fleet to stop (current status: $fleet_status)..."
+                  fleet_status=$(pcluster describe-compute-fleet --cluster-name hpc-cluster --query status)
+              done
+          fi
+          echo "Done. Updating existing cluster"
+          set +e
+          pcluster update-cluster --cluster-configuration compute-cluster.yaml --cluster-name hpc-cluster --dryrun $DRYRUN 2>&1 > pcluster-output.log
+          pcluster_status=$?
+          set -e
+      else
+          echo "Creating new cluster"
+          set +e
+          pcluster create-cluster --cluster-configuration compute-cluster.yaml --cluster-name hpc-cluster --dryrun $DRYRUN 2>&1 > pcluster-output.log
+          pcluster_status=$?
+          set -e
+      fi
+    - |
+      cat pcluster-output.log
+      if [ "$DRYRUN" = "false" ]; then
+          test pcluster_status -eq 0
+          pcluster describe-cluster --cluster-name hpc-cluster
+      else
+          cat pcluster-output.log | grep -q "Request would have succeeded, but DryRun flag is set\|No changes found"
+      fi
+
+# the update/create commands always return with an error code when you use --dryrun true, even when the validation succeeded and there are no errors => parsing the output afterwards
+validate:
+  stage: start
+  variables:
+    DRYRUN: "true"
+  extends: .update_or_create_cluster
+
 
 deploy:
   stage: deploy
-  extends: .pcluster
-  script:
-    - pcluster list-clusters | if grep -q hpc-cluster ; then echo "Updating existing cluster"; pcluster update-cluster --cluster-configuration compute-cluster.yaml --cluster-name hpc-cluster --dryrun false; else echo "Creating new cluster"; pcluster create-cluster --cluster-configuration compute-cluster.yaml --cluster-name hpc-cluster --dryrun false; fi
-    - pcluster describe-cluster --cluster-name hpc-cluster
-    - bash update_dns_record.sh
+  variables:
+    DRYRUN: "false"
+  extends: .update_or_create_cluster
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
@@ -80,6 +115,17 @@ print_info:
     - pcluster list-images --image-status FAILED
     - pcluster list-clusters
     - pcluster list-clusters | if grep -q hpc-cluster ; then pcluster describe-cluster --region us-east-1 --cluster-name hpc-cluster; fi
+
+export_cluster_logs:
+  stage: info
+  extends: .pcluster
+  when: manual
+  allow_failure: true
+  script:
+    - pcluster export-cluster-logs --cluster-name hpc-cluster --bucket sboinfrastructureassets --bucket-prefix logs --output-file "log_archive_$(date +%Y%m%d_%H%M%S).tar.gz"
+  artifacts:
+    paths:
+      - log_archive_*.tar.gz
 
 update_components:
   stage: deploy
