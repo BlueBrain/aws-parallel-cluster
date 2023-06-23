@@ -37,12 +37,14 @@ stages:
               done
           fi
           echo "Done. Updating existing cluster"
+          echo "PCLUSTER_ACTION=update" > build.env
           set +e
           pcluster update-cluster --cluster-configuration compute-cluster.yaml --cluster-name hpc-cluster --dryrun $DRYRUN 2>&1 > pcluster-output.log
           pcluster_status=$?
           set -e
       else
           echo "Creating new cluster"
+          echo "PCLUSTER_ACTION=create" > build.env
           set +e
           pcluster create-cluster --cluster-configuration compute-cluster.yaml --cluster-name hpc-cluster --dryrun $DRYRUN 2>&1 > pcluster-output.log
           pcluster_status=$?
@@ -51,7 +53,7 @@ stages:
     - |
       cat pcluster-output.log
       if [ "$DRYRUN" = "false" ]; then
-          test pcluster_status -eq 0
+          test $pcluster_status -eq 0
           pcluster describe-cluster --cluster-name hpc-cluster
       else
           cat pcluster-output.log | grep -q "Request would have succeeded, but DryRun flag is set\|No changes found"
@@ -72,14 +74,30 @@ deploy:
   extends: .update_or_create_cluster
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  artifacts:
+    reports:
+      dotenv: build.env
 
-update_dns_record:
+
+post_deploy:
   stage: deploy
   extends: .pcluster
   needs:
     - deploy
   script:
-    - bash update_dns_record.sh
+    - |
+      if [ "$PCLUSTER_ACTION" = "create" ]; then
+          bash update_dns_record.sh
+      else # PCLUSTER_ACTION = update
+          cluster_status=$(pcluster describe-cluster --cluster-name hpc-cluster --query clusterStatus)
+          while [[ "$cluster_status" != *"UPDATE_COMPLETE"* ]]; do
+              sleep 10
+              echo "Waiting for cluster to finish updating  (current status: $fleet_status)..."
+              cluster_status=$(pcluster describe-cluster --cluster-name hpc-cluster --query clusterStatus)
+          done
+          echo "Done. restarting compute fleet"
+          pcluster update-compute-fleet --cluster-name hpc-cluster --status START_REQUESTED
+      fi
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
@@ -114,7 +132,11 @@ print_info:
     - pcluster list-images --image-status PENDING
     - pcluster list-images --image-status FAILED
     - pcluster list-clusters
-    - pcluster list-clusters | if grep -q hpc-cluster ; then pcluster describe-cluster --region us-east-1 --cluster-name hpc-cluster; fi
+    - |
+      if $(pcluster list-clusters | grep -q hpc-cluster) ; then
+          pcluster describe-cluster --cluster-name hpc-cluster
+          pcluster describe-compute-fleet --cluster-name hpc-cluster
+      fi
 
 export_cluster_logs:
   stage: info
@@ -163,6 +185,20 @@ build_image_status:
   when: manual
   script:
     - pcluster list-images --image-status PENDING
+
+start_compute_fleet:
+  stage: info
+  extends: .pcluster
+  when: manual
+  script:
+    - pcluster update-compute-fleet --cluster-name hpc-cluster --status START_REQUESTED
+
+stop_compute_fleet:
+  stage: info
+  extends: .pcluster
+  when: manual
+  script:
+    - pcluster update-compute-fleet --cluster-name hpc-cluster --status STOP_REQUESTED
 
 delete_cloudformation_stack:
   stage: info
