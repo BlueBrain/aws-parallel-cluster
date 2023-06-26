@@ -64,7 +64,7 @@ Scheduling:
         Enabled: false
     Networking:
       PlacementGroup: # try to place nodes close to each other
-        Enabled: true
+        Enabled: false
       SubnetIds:
       - subnet-076ece71c00742d3c # compute
       SecurityGroups:

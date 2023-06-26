@@ -27,16 +27,8 @@ stages:
           echo -n "Checking fleet status: "
           fleet_status=$(pcluster describe-compute-fleet --cluster-name hpc-cluster --query status)
           if [[ "$fleet_status" != *"STOPPED"* ]]; then
-              echo "$fleet_status. Stopping fleet."
-              pcluster update-compute-fleet --cluster-name hpc-cluster --status STOP_REQUESTED
-              fleet_status=$(pcluster describe-compute-fleet --cluster-name hpc-cluster --query status)
-              while [[ "$fleet_status" != *"STOPPED"* ]]; do
-                  sleep 5
-                  echo "Waiting for fleet to stop (current status: $fleet_status)..."
-                  fleet_status=$(pcluster describe-compute-fleet --cluster-name hpc-cluster --query status)
-              done
+              echo "Fleet is not stopped, please stop and rerun validation."
           fi
-          echo "Done. Updating existing cluster"
           echo "PCLUSTER_ACTION=update" > build.env
           set +e
           pcluster update-cluster --cluster-configuration compute-cluster.yaml --cluster-name hpc-cluster --dryrun $DRYRUN 2>&1 > pcluster-output.log
@@ -201,14 +193,30 @@ start_compute_fleet:
   extends: .pcluster
   when: manual
   script:
-    - pcluster update-compute-fleet --cluster-name hpc-cluster --status START_REQUESTED
+    - |
+      pcluster update-compute-fleet --cluster-name hpc-cluster --status START_REQUESTED
+      fleet_status=$(pcluster describe-compute-fleet --cluster-name hpc-cluster --query status)
+      while [[ "$fleet_status" != *"RUNNING"* ]]; do
+          sleep 5
+          echo "Waiting for fleet to stop (current status: $fleet_status)..."
+          fleet_status=$(pcluster describe-compute-fleet --cluster-name hpc-cluster --query status)
+      done
+      echo "Done."
 
 stop_compute_fleet:
   stage: info
   extends: .pcluster
   when: manual
   script:
-    - pcluster update-compute-fleet --cluster-name hpc-cluster --status STOP_REQUESTED
+    - |
+      pcluster update-compute-fleet --cluster-name hpc-cluster --status STOP_REQUESTED
+      fleet_status=$(pcluster describe-compute-fleet --cluster-name hpc-cluster --query status)
+      while [[ "$fleet_status" != *"STOPPED"* ]]; do
+          sleep 5
+          echo "Waiting for fleet to stop (current status: $fleet_status)..."
+          fleet_status=$(pcluster describe-compute-fleet --cluster-name hpc-cluster --query status)
+      done
+      echo "Done."
 
 delete_cloudformation_stack:
   stage: info
