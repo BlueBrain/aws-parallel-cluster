@@ -138,6 +138,16 @@ print_info:
           pcluster describe-compute-fleet --cluster-name hpc-cluster
       fi
 
+print_instance_availabilities:
+  stage: info
+  extends: .aws-cli
+  when: manual
+  allow_failure: true
+  script:
+    - aws ec2 describe-reserved-instances-offerings --filters "Name=scope,Values=Availability Zone" --no-include-marketplace --instance-type t3.micro --region us-east-1
+    - aws ec2 describe-reserved-instances-offerings --filters "Name=scope,Values=Availability Zone" --no-include-marketplace --instance-type c6i.metal --region us-east-1
+    - aws ec2 describe-reserved-instances-offerings --filters "Name=scope,Values=Availability Zone" --no-include-marketplace --instance-type c6id.metal --region us-east-1
+
 export_cluster_logs:
   stage: info
   extends: .pcluster
