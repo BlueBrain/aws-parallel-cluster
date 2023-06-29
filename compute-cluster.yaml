@@ -19,6 +19,7 @@ HeadNode:
         - Script: s3://sboinfrastructureassets/scripts/create_users.py
           Args:
             - /compute-efs/users.json
+        - Script: s3://sboinfrastructureassets/scripts/all_or_nothing_allocation.sh
 Scheduling:
   Scheduler: slurm
   SlurmQueues:
@@ -44,24 +45,51 @@ Scheduling:
           - Script: s3://sboinfrastructureassets/scripts/create_users.py
             Args:
               - /compute-efs/users.json
-  - Name: prod # for benchmarking
+  - Name: prod-mpi # for benchmarking
     AllocationStrategy: lowest-price
     ComputeResources:
     - Name: cpu
       Instances:
-      - InstanceType: c6i.metal # compute optimized nodes
+      - InstanceType: c5n.metal # compute optimized nodes
       MinCount: 0
-      MaxCount: 20 # upper limit for largest PoC case defined in cost estimation sheet
+      MaxCount: 30 # upper limit for largest PoC case defined in cost estimation sheet
       Efa: # low-latency, high BW network
         Enabled: false # enable after security groups have been updated
                        # https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/efa-start.html#efa-start-security
     - Name: nvme
       Instances:
-      - InstanceType: c6id.metal # provides additionally nvme support
+      - InstanceType: c5d.metal # provides additionally nvme support
       MinCount: 0
       MaxCount: 2 # upper limit for functionalizer use-case defined in cost estimation sheet
       Efa:
         Enabled: false
+    Networking:
+      PlacementGroup: # try to place nodes close to each other
+        Enabled: true
+      SubnetIds:
+      - subnet-076ece71c00742d3c # compute
+      SecurityGroups:
+      - sg-0b5941ba4f4d1a9ff # sbo-poc-compute / hpc
+    Iam:
+      S3Access:
+        - BucketName: sboinfrastructureassets
+    CustomActions:
+      OnNodeStart:
+        Sequence:
+          - Script: s3://sboinfrastructureassets/scripts/create_users.py
+            Args:
+              - /compute-efs/users.json
+  - Name: prod-batch # for benchmarking
+    AllocationStrategy: lowest-price
+    ComputeResources:
+    - Name: cpu
+      Instances:
+      - InstanceType: c5n.9xlarge # compute optimized nodes
+      MinCount: 0
+      MaxCount: 50 # upper limit for largest PoC case defined in cost estimation sheet
+      Efa: # low-latency, high BW network
+        Enabled: false # enable after security groups have been updated
+                       # https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/efa-start.html#efa-start-security
     Networking:
       PlacementGroup: # try to place nodes close to each other
         Enabled: false

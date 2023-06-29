@@ -28,6 +28,7 @@ stages:
           fleet_status=$(pcluster describe-compute-fleet --cluster-name hpc-cluster --query status)
           if [[ "$fleet_status" != *"STOPPED"* ]]; then
               echo "Fleet is not stopped, please stop and rerun validation."
+              exit 1
           fi
           echo "PCLUSTER_ACTION=update" > build.env
           set +e
@@ -99,10 +100,12 @@ push_scripts:
   extends: .aws-cli
   script:
     - aws s3 cp ./create_users.py s3://sboinfrastructureassets/scripts/
+    - aws s3 cp ./all_or_nothing_allocation.sh s3://sboinfrastructureassets/scripts/
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
       changes:
         - create_users.py
+        - all_or_nothing_allocation.sh
 
 destroy:
   stage: start
