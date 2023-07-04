@@ -15,6 +15,7 @@ done
 echo "The cluster is ready"
 
 # Install the aws cli
+# TODO: Replace this by 'pip3 install awscli --upgrade --use-feature=2020-resolver'
 curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
 unzip -q awscliv2.zip
 ./aws/install

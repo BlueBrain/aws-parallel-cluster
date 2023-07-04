@@ -20,6 +20,10 @@ HeadNode:
           Args:
             - /compute-efs/users.json
         - Script: s3://sboinfrastructureassets/scripts/all_or_nothing_allocation.sh
+        - Script: s3://sboinfrastructureassets/scripts/setup_lustre_directories.py
+          Args:
+            - /compute-efs/users.json
+            - /sbo/lustre
 Scheduling:
   Scheduler: slurm
   SlurmQueues:
@@ -116,3 +120,10 @@ SharedStorage:
     MountDir: /compute-efs
     EfsSettings:
       FileSystemId: fs-0c2a2f3ad1b1beeca # sbo-poc-compute
+  - Name: FsxLustre-Scratch
+    StorageType: FsxLustre
+    MountDir: /sbo/lustre
+    FsxLustreSettings:
+      DeploymentType: SCRATCH_2
+      StorageCapacity: 2400  # Configure Lustre for 2.4TiB (it has to be a multiple of 2.4)
+      DataCompressionType: LZ4  # Data compression for higher-throughput between OSSs <-> OSTs

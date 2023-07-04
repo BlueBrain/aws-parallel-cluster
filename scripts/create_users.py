@@ -23,17 +23,28 @@ def main(argv):
     if len(argv) != 2:
         print("Please supply a user database")
         exit(1)
+
+    # Setup the SBO group first
+    group_id = 2000
+    group_name = "sbo"
+    groupadd_cmd = f"sudo groupadd -g {group_id} {group_name}"
+    ret = subprocess.run(groupadd_cmd.split(' '))
+    if not ret.returncode:
+        print(f"Group '{group_name}' successfully created")
+    else:
+        print(f"Group '{group_name}' creation failed: {ret.stderr}")
+
+    # Create the users and assign them to the SBO group
     user_filename = argv[1]
     with open(user_filename, 'r') as f:
         users = json.load(f)
     for user in users:
-        useradd_cmd = f"sudo useradd -d /compute-efs/home/{user['name']} -M -s {user['shell']} -u {user['uid']} -U {user['name']}"
+        useradd_cmd = f"sudo useradd -d /compute-efs/home/{user['name']} -M -s {user['shell']} -u {user['uid']} -U {user['name']} -G {group_name}"
         ret = subprocess.run(useradd_cmd.split(' '))
         if not ret.returncode:
             print(f"user {user['name']} successfully created")
         else:
-            print(f"user creation for {user['name']} failed:")
-            print(ret.stderr)
+            print(f"user creation for {user['name']} failed: {ret.stderr}")
         set_sudo(user['name'], user['sudo'])
 
 

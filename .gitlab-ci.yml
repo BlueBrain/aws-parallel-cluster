@@ -32,14 +32,14 @@ stages:
           fi
           echo "PCLUSTER_ACTION=update" > build.env
           set +e
-          pcluster update-cluster --cluster-configuration compute-cluster.yaml --cluster-name hpc-cluster --dryrun $DRYRUN 2>&1 > pcluster-output.log
+          pcluster update-cluster --cluster-configuration ./config/compute-cluster.yaml --cluster-name hpc-cluster --dryrun $DRYRUN 2>&1 > pcluster-output.log
           pcluster_status=$?
           set -e
       else
           echo "Creating new cluster"
           echo "PCLUSTER_ACTION=create" > build.env
           set +e
-          pcluster create-cluster --cluster-configuration compute-cluster.yaml --cluster-name hpc-cluster --dryrun $DRYRUN 2>&1 > pcluster-output.log
+          pcluster create-cluster --cluster-configuration ./config/compute-cluster.yaml --cluster-name hpc-cluster --dryrun $DRYRUN 2>&1 > pcluster-output.log
           pcluster_status=$?
           set -e
       fi
@@ -80,7 +80,8 @@ post_deploy:
   script:
     - |
       if [ "$PCLUSTER_ACTION" = "create" ]; then
-          bash update_dns_record.sh
+          bash scripts/setup_lustre_dra.sh
+          bash scripts/update_dns_record.sh
       else # PCLUSTER_ACTION = update
           cluster_status=$(pcluster describe-cluster --cluster-name hpc-cluster --query clusterStatus)
           while [[ "$cluster_status" != *"UPDATE_COMPLETE"* ]]; do
@@ -99,13 +100,15 @@ push_scripts:
   stage: deploy
   extends: .aws-cli
   script:
-    - aws s3 cp ./create_users.py s3://sboinfrastructureassets/scripts/
-    - aws s3 cp ./all_or_nothing_allocation.sh s3://sboinfrastructureassets/scripts/
+    - aws s3 cp ./scripts/create_users.py s3://sboinfrastructureassets/scripts/
+    - aws s3 cp ./scripts/all_or_nothing_allocation.sh s3://sboinfrastructureassets/scripts/
+    - aws s3 cp ./scripts/setup_lustre_directories.py s3://sboinfrastructureassets/scripts/
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
       changes:
-        - create_users.py
-        - all_or_nothing_allocation.sh
+        - scripts/create_users.py
+        - scripts/all_or_nothing_allocation.sh
+        - scripts/setup_lustre_directories.py
 
 destroy:
   stage: start
@@ -159,7 +162,7 @@ update_components:
   extends: .aws-cli
   when: manual
   script:
-    - aws s3 cp ./efs_component.yaml s3://sboinfrastructureassets/components/
+    - aws s3 cp ./config/efs_component.yaml s3://sboinfrastructureassets/components/
     - aws imagebuilder create-component --name compute-efs --semantic-version "1.0.3" --change-description "Improve error handling" --platform "Linux" --uri "s3://sboinfrastructureassets/components/efs_component.yaml"
 
 print_components:
@@ -174,7 +177,7 @@ build_image:
   extends: .pcluster
   when: manual
   script:
-    - pcluster build-image --image-configuration custom_al2_ami_config.yaml --image-id alinux2-sbo-pcluster-v1
+    - pcluster build-image --image-configuration ./config/custom_al2_ami_config.yaml --image-id alinux2-sbo-pcluster-v1
     - pcluster list-images --image-status PENDING
 
 delete_image:
