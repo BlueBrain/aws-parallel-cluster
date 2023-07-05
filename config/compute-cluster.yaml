@@ -60,8 +60,7 @@ Scheduling:
       MinCount: 0
       MaxCount: 30 # upper limit for largest PoC case defined in cost estimation sheet
       Efa: # low-latency, high BW network
-        Enabled: false # enable after security groups have been updated
-                       # https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/efa-start.html#efa-start-security
+        Enabled: true # https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/efa-start.html#efa-start-security
     - Name: nvme
       Instances:
       - InstanceType: c5d.metal # provides additionally nvme support
@@ -75,7 +74,7 @@ Scheduling:
       SubnetIds:
       - subnet-076ece71c00742d3c # compute
       SecurityGroups:
-      - sg-0b5941ba4f4d1a9ff # sbo-poc-compute / hpc
+      - sg-0184e34d690eddb22 # sbo-poc-compute / hpc_efa
     Iam:
       S3Access:
         - BucketName: sboinfrastructureassets
