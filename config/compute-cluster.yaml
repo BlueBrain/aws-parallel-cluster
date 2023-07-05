@@ -20,6 +20,8 @@ HeadNode:
           Args:
             - /compute-efs/users.json
         - Script: s3://sboinfrastructureassets/scripts/all_or_nothing_allocation.sh
+    OnNodeConfigured:
+      Sequence:
         - Script: s3://sboinfrastructureassets/scripts/setup_lustre_directories.py
           Args:
             - /compute-efs/users.json

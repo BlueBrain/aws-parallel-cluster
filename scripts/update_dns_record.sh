@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# To be used within that pcluster image: expects pcluster to work, with aws credentials configured
-yum install -y unzip jq
-
 # Make sure the cluster is ready
 echo "Checking if the cluster is ready"
 cluster_status=$(pcluster describe-cluster -n hpc-cluster | jq -r .clusterStatus)
