@@ -14,12 +14,6 @@ do
 done
 echo "The cluster is ready"
 
-# Install the aws cli
-# TODO: Replace this by 'pip3 install awscli --upgrade --use-feature=2020-resolver'
-curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-unzip -q awscliv2.zip
-./aws/install
-
 # Get the ID of the dns zone
 zone_id=$(aws route53 list-hosted-zones-by-name | jq -r '.HostedZones[] | select(.Name=="shapes-registry.org.") | .Id')
 echo "Zone id: ${zone_id}"

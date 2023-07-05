@@ -13,6 +13,12 @@ stages:
 .pcluster:
   image: public.ecr.aws/parallelcluster/pcluster-api:3.6.0
   before_script:
+    - |
+      # Install the aws cli
+      yum install -y unzip jq
+      curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+      unzip -q awscliv2.zip
+      ./aws/install
     - mkdir -p ~/.aws/
     - echo -e "[default]\naws_access_key_id = ${AWS_ACCESS_KEY}\naws_secret_access_key = ${AWS_SECRET_ACCESS_KEY}\n" > ~/.aws/credentials
     - echo -e "[default]\nregion = us-east-1\noutput = json\n" > ~/.aws/config
@@ -126,6 +132,7 @@ print_info:
   script:
     - pcluster version
     - pcluster list-official-images
+    - aws imagebuilder list-components --owner Self
     - pcluster list-images --image-status AVAILABLE
     - pcluster list-images --image-status PENDING
     - pcluster list-images --image-status FAILED
@@ -164,13 +171,6 @@ update_components:
   script:
     - aws s3 cp ./config/efs_component.yaml s3://sboinfrastructureassets/components/
     - aws imagebuilder create-component --name compute-efs --semantic-version "1.0.3" --change-description "Improve error handling" --platform "Linux" --uri "s3://sboinfrastructureassets/components/efs_component.yaml"
-
-print_components:
-  stage: info
-  extends: .aws-cli
-  when: manual
-  script:
-    - aws imagebuilder list-components --owner Self
 
 build_image:
   stage: deploy
