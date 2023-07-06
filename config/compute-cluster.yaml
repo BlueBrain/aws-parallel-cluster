@@ -70,14 +70,14 @@ Scheduling:
         Enabled: true # https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/efa-start.html#efa-start-security
     - Name: cpu-m5n
       Instances:
-      - InstanceType: m5n.metal # compute optimized nodes
+      - InstanceType: m5n.metal # general purpose nodes
       MinCount: 0
       MaxCount: 30 # upper limit for largest PoC case defined in cost estimation sheet
       Efa: # low-latency, high BW network
         Enabled: true # https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/efa-start.html#efa-start-security
     - Name: cpu-m6in
       Instances:
-      - InstanceType: m6in.metal # compute optimized nodes
+      - InstanceType: m6in.metal # general purpose nodes
       MinCount: 0
       MaxCount: 30 # upper limit for largest PoC case defined in cost estimation sheet
       Efa: # low-latency, high BW network
