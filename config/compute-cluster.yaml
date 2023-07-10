@@ -89,7 +89,7 @@ Scheduling:
     ComputeResources:
     - Name: cpu
       Instances:
-      - InstanceType: c5n.9xlarge # compute optimized nodes
+      - InstanceType: m5.8xlarge # general purpose nodes
       MinCount: 0
       MaxCount: 50 # upper limit for largest PoC case defined in cost estimation sheet
       Efa: # low-latency, high BW network
