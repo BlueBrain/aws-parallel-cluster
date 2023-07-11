@@ -185,8 +185,10 @@ delete_image:
   stage: deploy
   extends: .pcluster
   when: manual
+  variables:
+    IMAGE_ID: ""
   script:
-    - pcluster delete-image  --image-id alinux2-sbo-pcluster-image
+    - pcluster delete-image  --image-id $IMAGE_ID
 
 build_image_status:
   stage: info

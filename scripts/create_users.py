@@ -39,7 +39,7 @@ def main(argv):
     with open(user_filename, 'r') as f:
         users = json.load(f)
     for user in users:
-        useradd_cmd = f"sudo useradd -d /compute-efs/home/{user['name']} -M -s {user['shell']} -u {user['uid']} -U {user['name']} -G {group_name}"
+        useradd_cmd = f"sudo useradd -d /sbo/home/{user['name']} -M -s {user['shell']} -u {user['uid']} -U {user['name']} -G {group_name}"
         ret = subprocess.run(useradd_cmd.split(' '))
         if not ret.returncode:
             print(f"user {user['name']} successfully created")

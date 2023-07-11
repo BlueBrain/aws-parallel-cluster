@@ -11,7 +11,7 @@ done
 
 # Setup the DRA for Nexus
 aws fsx create-data-repository-association --file-system-id ${FSX_ID} \
-                                           --file-system-path /nexus \
+                                           --file-system-path /project \
                                            --data-repository-path s3://sbonexusdata \
                                            --batch-import-meta-data-on-create \
                                            --s3 AutoImportPolicy=\{"Events"=["NEW","CHANGED","DELETED"]\},AutoExportPolicy=\{"Events"=["NEW","CHANGED","DELETED"]\}

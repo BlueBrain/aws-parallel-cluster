@@ -1,7 +1,7 @@
 Region: us-east-1
 Image:
   Os: alinux2
-  CustomAmi: ami-01df237b945ab7147
+  CustomAmi: ami-036a6565c4274982e
 HeadNode:
   InstanceType: t3.micro
   Networking:
@@ -14,18 +14,16 @@ HeadNode:
     S3Access:
       - BucketName: sboinfrastructureassets
   CustomActions:
-    OnNodeStart:
+    OnNodeConfigured:
       Sequence:
         - Script: s3://sboinfrastructureassets/scripts/create_users.py
           Args:
-            - /compute-efs/users.json
+            - /sbo/home/resources/users.json
         - Script: s3://sboinfrastructureassets/scripts/all_or_nothing_allocation.sh
-    OnNodeConfigured:
-      Sequence:
         - Script: s3://sboinfrastructureassets/scripts/setup_lustre_directories.py
           Args:
-            - /compute-efs/users.json
-            - /sbo/lustre
+            - /sbo/home/resources/users.json
+            - /sbo/data
 Scheduling:
   Scheduler: slurm
   SlurmQueues:
@@ -46,11 +44,11 @@ Scheduling:
       S3Access:
         - BucketName: sboinfrastructureassets
     CustomActions:
-      OnNodeStart:
+      OnNodeConfigured:
         Sequence:
           - Script: s3://sboinfrastructureassets/scripts/create_users.py
             Args:
-              - /compute-efs/users.json
+              - /sbo/home/resources/users.json
   - Name: prod-mpi # for benchmarking
     AllocationStrategy: lowest-price
     ComputeResources:
@@ -100,11 +98,11 @@ Scheduling:
       S3Access:
         - BucketName: sboinfrastructureassets
     CustomActions:
-      OnNodeStart:
+      OnNodeConfigured:
         Sequence:
           - Script: s3://sboinfrastructureassets/scripts/create_users.py
             Args:
-              - /compute-efs/users.json
+              - /sbo/home/resources/users.json
   - Name: prod-batch # for benchmarking
     AllocationStrategy: lowest-price
     ComputeResources:
@@ -127,25 +125,26 @@ Scheduling:
       S3Access:
         - BucketName: sboinfrastructureassets
     CustomActions:
-      OnNodeStart:
+      OnNodeConfigured:
         Sequence:
           - Script: s3://sboinfrastructureassets/scripts/create_users.py
             Args:
-              - /compute-efs/users.json
+              - /sbo/home/resources/users.json
   SlurmSettings:
     EnableMemoryBasedScheduling: true
 Imds:
   ImdsSupport: v2.0
 SharedStorage:
-  - Name: Efs0
+  - Name: Efs-Home
     StorageType: Efs
-    MountDir: /compute-efs
+    MountDir: /sbo/home
     EfsSettings:
-      FileSystemId: fs-0c2a2f3ad1b1beeca # sbo-poc-compute
+      FileSystemId: fs-0c2a2f3ad1b1beeca
   - Name: FsxLustre-Scratch
     StorageType: FsxLustre
-    MountDir: /sbo/lustre
+    MountDir: /sbo/data
     FsxLustreSettings:
       DeploymentType: SCRATCH_2
-      StorageCapacity: 2400  # Configure Lustre for 2.4TiB (it has to be a multiple of 2.4)
+      # StorageCapacity: 2400  # <<<<<<<<<<<<<<<<<<<<< TODO: Revert back Lustre to be either 1.2TiB (minimum allowed) or 2.4TiB (it has to be a multiple of 2.4)
+      StorageCapacity: 7200  # <<<<<<<<<<<<<<<<<<<<< TEMP. CHANGE: Configure Lustre for 7.2TiB to quickly test filesizes >5TiB
       DataCompressionType: LZ4  # Data compression for higher-throughput between OSSs <-> OSTs
