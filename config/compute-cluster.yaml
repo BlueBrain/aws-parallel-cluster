@@ -63,7 +63,7 @@ Scheduling:
         Enabled: true # https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/efa-start.html#efa-start-security
     - Name: cpu-c6in
       Instances:
-      - InstanceType: c5n.metal # compute optimized nodes
+      - InstanceType: c6in.metal # compute optimized nodes
       MinCount: 0
       MaxCount: 30 # upper limit for largest PoC case defined in cost estimation sheet
       Efa: # low-latency, high BW network
