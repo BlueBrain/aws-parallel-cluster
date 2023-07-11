@@ -169,15 +169,16 @@ update_components:
   extends: .aws-cli
   when: manual
   script:
-    - aws s3 cp ./config/efs_component.yaml s3://sboinfrastructureassets/components/
-    - aws imagebuilder create-component --name compute-efs --semantic-version "1.0.3" --change-description "Improve error handling" --platform "Linux" --uri "s3://sboinfrastructureassets/components/efs_component.yaml"
+    - echo "no-op" # update manually if components change - yes it's ugly
+      #- aws s3 cp ./config/singularity_component.yaml s3://sboinfrastructureassets/components/
+      #- aws imagebuilder create-component --name singularity --semantic-version "1.0.3" --change-description "Improve error handling" --platform "Linux" --uri "s3://sboinfrastructureassets/components/singularity_component.yaml"
 
 build_image:
   stage: deploy
   extends: .pcluster
   when: manual
   script:
-    - pcluster build-image --image-configuration ./config/custom_al2_ami_config.yaml --image-id alinux2-sbo-pcluster-v1
+    - pcluster build-image --image-configuration ./config/custom_al2_ami_config.yaml --image-id alinux2-sbo-pcluster-v2
     - pcluster list-images --image-status PENDING
 
 delete_image:
