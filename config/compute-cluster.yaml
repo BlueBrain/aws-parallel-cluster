@@ -145,6 +145,5 @@ SharedStorage:
     MountDir: /sbo/data
     FsxLustreSettings:
       DeploymentType: SCRATCH_2
-      # StorageCapacity: 2400  # <<<<<<<<<<<<<<<<<<<<< TODO: Revert back Lustre to be either 1.2TiB (minimum allowed) or 2.4TiB (it has to be a multiple of 2.4)
-      StorageCapacity: 7200  # <<<<<<<<<<<<<<<<<<<<< TEMP. CHANGE: Configure Lustre for 7.2TiB to quickly test filesizes >5TiB
+      StorageCapacity: 1200  # Setup Lustre for 1.2TiB (minimum allowed)
       DataCompressionType: LZ4  # Data compression for higher-throughput between OSSs <-> OSTs
