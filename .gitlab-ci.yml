@@ -122,7 +122,17 @@ destroy:
   when: manual
   allow_failure: true
   script:
-    - pcluster delete-cluster --cluster-name hpc-cluster
+    - |
+      set +e
+      pcluster delete-cluster --cluster-name hpc-cluster
+      cluster_status=$(pcluster describe-cluster --cluster-name hpc-cluster --query clusterStatus)
+      while [[ "${cluster_status}" == *"DELETE_IN_PROGRESS"* ]]; do
+          echo "Waiting for the cluster to be deleted..."
+          sleep 10
+          cluster_status=$(pcluster describe-cluster --cluster-name hpc-cluster --query clusterStatus)
+      done
+      set -e
+      echo ${cluster_status}
 
 print_info:
   stage: info
