@@ -22,7 +22,3 @@ aws fsx create-data-repository-association --file-system-id ${FSX_ID} \
                                            --data-repository-path s3://sboinfrastructureassets/containers/ \
                                            --batch-import-meta-data-on-create \
                                            --s3 AutoImportPolicy=\{"Events"=["NEW","CHANGED","DELETED"]\}
-
-# Enable CloudWatch logging (by default, stored under '/aws/fsx/lustre' group in 'datarepo_${FSX_ID}' stream)
-aws fsx update-file-system --file-system-id ${FSX_ID} \
-                           --lustre-configuration "LogConfiguration={Level=WARN_ERROR}"
