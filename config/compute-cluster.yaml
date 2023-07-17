@@ -59,9 +59,16 @@ Scheduling:
       MaxCount: 30 # upper limit for largest PoC case defined in cost estimation sheet
       Efa: # low-latency, high BW network
         Enabled: true # https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/efa-start.html#efa-start-security
-    - Name: cpu-c6in
+    - Name: cpu-c6inm
       Instances:
       - InstanceType: c6in.metal # compute optimized nodes
+      MinCount: 0
+      MaxCount: 30 # upper limit for largest PoC case defined in cost estimation sheet
+      Efa: # low-latency, high BW network
+        Enabled: true # https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/efa-start.html#efa-start-security
+    - Name: cpu-c6inv
+      Instances:
+      - InstanceType: c6in.32xlarge # compute optimized nodes
       MinCount: 0
       MaxCount: 30 # upper limit for largest PoC case defined in cost estimation sheet
       Efa: # low-latency, high BW network
