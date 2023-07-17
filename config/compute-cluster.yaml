@@ -100,6 +100,7 @@ Scheduling:
       SubnetIds:
       - subnet-076ece71c00742d3c # compute
       SecurityGroups:
+      - sg-0b5941ba4f4d1a9ff # sbo-poc-compute / hpc
       - sg-0184e34d690eddb22 # sbo-poc-compute / hpc_efa
     Iam:
       S3Access:
