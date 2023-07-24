@@ -24,6 +24,7 @@ HeadNode:
           Args:
             - /sbo/home/resources/users.json
             - /sbo/data
+        - Script: s3://sboinfrastructureassets/scripts/setup_slurm.sh
 Scheduling:
   Scheduler: slurm
   SlurmQueues:
@@ -49,7 +50,7 @@ Scheduling:
           - Script: s3://sboinfrastructureassets/scripts/create_users.py
             Args:
               - /sbo/home/resources/users.json
-  - Name: prod-mpi # for benchmarking
+  - Name: prod-mpi # for tightly coupled jobs
     AllocationStrategy: lowest-price
     ComputeResources:
     - Name: cpu-c5n
@@ -88,6 +89,9 @@ Scheduling:
       SecurityGroups:
       - sg-0b5941ba4f4d1a9ff # sbo-poc-compute / hpc
       - sg-0184e34d690eddb22 # sbo-poc-compute / hpc_efa
+    CustomSlurmSettings:
+      MaxNodes: 4
+      MaxTime: 120
     Iam:
       S3Access:
         - BucketName: sboinfrastructureassets
@@ -115,6 +119,9 @@ Scheduling:
       - subnet-076ece71c00742d3c # compute
       SecurityGroups:
       - sg-0b5941ba4f4d1a9ff # sbo-poc-compute / hpc
+    CustomSlurmSettings:
+      MaxNodes: 4
+      MaxTime: 120
     Iam:
       S3Access:
         - BucketName: sboinfrastructureassets
@@ -126,6 +133,7 @@ Scheduling:
               - /sbo/home/resources/users.json
   SlurmSettings:
     EnableMemoryBasedScheduling: true
+    CustomSlurmSettingsIncludeFile: s3://sboinfrastructureassets/config/slurm_extras.conf
 Imds:
   ImdsSupport: v2.0
 SharedStorage:

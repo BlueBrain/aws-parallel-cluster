@@ -107,15 +107,10 @@ push_scripts:
   stage: deploy
   extends: .aws-cli
   script:
-    - aws s3 cp ./scripts/create_users.py s3://sboinfrastructureassets/scripts/
-    - aws s3 cp ./scripts/all_or_nothing_allocation.sh s3://sboinfrastructureassets/scripts/
-    - aws s3 cp ./scripts/setup_lustre_directories.py s3://sboinfrastructureassets/scripts/
+    - aws s3 sync ./config/s3 s3://sboinfrastructureassets/config/
+    - aws s3 sync ./scripts/s3 s3://sboinfrastructureassets/scripts/
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-      changes:
-        - scripts/create_users.py
-        - scripts/all_or_nothing_allocation.sh
-        - scripts/setup_lustre_directories.py
 
 destroy:
   stage: start
