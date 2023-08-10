@@ -36,6 +36,11 @@ Scheduling:
       - InstanceType: t3.micro
       MinCount: 0
       MaxCount: 8
+    - Name: t2xlarge # testing issue with STEPS and lack of avx512
+      Instances:
+      - InstanceType: t2.xlarge
+      MinCount: 0
+      MaxCount: 2
     Networking:
       SubnetIds:
       - subnet-076ece71c00742d3c # compute
