@@ -1,5 +1,64 @@
 #!/bin/bash
 
-# IMPORTANT: Empty script for initial deployment
+#####################################################################
+# Cleans-up any temporary resources associated with the job, stores #
+# logs and other related information, and more. Additionally, it    #
+# kills any user processes on the node when the last SLURM job ends #
+# there. For example, if a user logs into an allocated node SLURM,  #
+# it will not kill its processes without this epilog script.        #
+#####################################################################
 
+# Perform common checks and set required variables (e.g., TMPDIR)
+. /opt/slurm/etc/scripts/slurm.common
+
+# INFRA-2142 & HELP-15810 & HPCTM-1633
+  # Only run on the 'main' node or 'batch' node
+  if [[ ${SLURMD_NODENAME} == $(scontrol_get BatchHost) ]]; then
+    # INFRA-2142
+      # Store >final< info, SLURM commands (e.g., 'salloc'/'sbatch' + 'srun' lines), and CloudWatch URLs
+      scontrol_cmd ${SLURM_JOB_ID_EXT} > $(logfile info)  # Extended job ID prevents wrong outputs in job arrays
+      cloudwatch_urls "false" $(scontrol_get EndTime) > $(logfile cloudwatch)
+
+      # Copy 'stdout' and link 'stderr' file if identical
+      cptrim "$(scontrol_get StdOut)" $(logfile stdout)
+      if [[ -z $(diff "$(scontrol_get StdOut)" "$(scontrol_get StdErr)" 2>&1) ]]; then
+        ln -s $(logfile stdout) $(logfile stderr)
+      else
+        cptrim "$(scontrol_get StdErr)" $(logfile stderr)
+      fi
+
+    # HELP-15810
+      # Copy the job environment alongside Neurodamus-Py and Caliper outputs created, if any
+      rm -f $(SLURM_STEP_ID=* logfile_shm pydamus mtime)
+      cp -f $(set -f && logfile * * ${SHMDIR} && set +f) ${SLURM_LOG_DIR} 2>/dev/null
+
+    # Assign 'slurm' as owner of all copied files and symbolic links in the log directory
+    chown --no-dereference slurm:slurm $(set -f && logfile * * && set +f)
+    chmod 644 $(set -f && logfile * * && set +f)
+  fi
+
+# HELP-9706
+  # Clean-up the temporary path (e.g., on Lustre FSx or NVMe drives)
+  rm -rf ${TMPDIR}
+
+# HELP-15578 & HELP-9299
+  # Clean-up the SHM directory created for the job
+  rm -rf ${SHMDIR}
+
+# Check if the user has more jobs running in the current node
+  if [[ $(numjobs_node --user=${SLURM_JOB_UID}) -gt 1 ]]; then
+    exit 0
+  fi
+
+  # No other SLURM jobs for the user, purge processes and leftovers (except root / systemd)
+  if [[ ${SLURM_JOB_UID} -gt 100 ]]; then
+    pkill -KILL -U ${SLURM_JOB_UID}
+    rm -rf $(find /tmp /dev/shm -xdev -user ${SLURM_JOB_USER} 2>/dev/null)
+  fi
+
+# HELP-9551
+  # Clean-up the SHM directory created for the user
+  rm -rf ${SHMDIR_USER}
+
+# Return 0 to prevent draining nodes after an error
 exit 0

@@ -1,52 +1,56 @@
 #!/usr/bin/env python3
 
 import json
-import os
 import subprocess
-import stat
 import sys
 
 
-def set_sudo(name, sudo):
+# Helper method to run a command and exit after an error
+def run_cmd(cmd, msg_prefix, output_file = subprocess.PIPE, exit_after_error = True):
+    try:
+        subprocess.run(cmd.split(' '), stdout=output_file, stderr=subprocess.PIPE, check=True)
+    except subprocess.CalledProcessError as ret:
+        error_msg = ret.stderr.decode().replace('\n','')
+        print(f"{msg_prefix} failed:\n\t\"{error_msg}\"")
+        if exit_after_error:
+            exit(ret.returncode)
+    print(f"{msg_prefix} succeeded.")
+
+
+# Helper method to create a user and configure sudo permissions
+def create_user(name, uid, group, shell, sudo):
+    # Create the user with the provided group and shell
+    run_cmd(f"useradd -d /sbo/home/{name} -M -s {shell} -u {uid} -U {name} -G {group}",
+            f"User '{name}' creation")
+
+    # Configure sudo permissions accordingly
     sudoers_file = f"/etc/sudoers.d/{name}"
     if sudo:
-        with open(sudoers_file, 'w') as f:
-            f.write(f"{name} ALL = NOPASSWD: ALL")
-        os.chown(sudoers_file, 0, 0)
-        os.chmod(sudoers_file, stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
+        run_cmd(f"echo -n {name} ALL = NOPASSWD: ALL",
+                f"Enabling sudo configuration for '{name}'",
+                open(sudoers_file, 'w'))
     else:
-        if os.path.isfile(sudoers_file):
-            print(f"sudoers file for {name} exists but requested to revoke rights, removing file.")
-            os.remove(sudoers_file)
+        run_cmd(f"rm -f {sudoers_file}",
+                f"Disabling sudo configuration for '{name}'")
 
 def main(argv):
     if len(argv) != 2:
-        print("Please supply a user database")
+        print("Please, supply a user database.")
         exit(1)
 
-    # Setup the SBO group first
+    user_filename = argv[1]
     group_id = 2000
     group_name = "sbo"
-    groupadd_cmd = f"sudo groupadd -g {group_id} {group_name}"
-    ret = subprocess.run(groupadd_cmd.split(' '))
-    if not ret.returncode:
-        print(f"Group '{group_name}' successfully created")
-    else:
-        print(f"Group '{group_name}' creation failed: {ret.stderr}")
 
-    # Create the users and assign them to the SBO group
-    user_filename = argv[1]
+    # First, configure the SBO group for the users
+    run_cmd(f"groupadd -g {group_id} {group_name}",
+            f"Group '{group_name}' creation")
+
+    # Create the users within the SBO group and configure sudo permissions
     with open(user_filename, 'r') as f:
         users = json.load(f)
     for user in users:
-        useradd_cmd = f"sudo useradd -d /sbo/home/{user['name']} -M -s {user['shell']} -u {user['uid']} -U {user['name']} -G {group_name}"
-        ret = subprocess.run(useradd_cmd.split(' '))
-        if not ret.returncode:
-            print(f"user {user['name']} successfully created")
-        else:
-            print(f"user creation for {user['name']} failed: {ret.stderr}")
-        set_sudo(user['name'], user['sudo'])
-
+        create_user(user['name'], user['uid'], group_name, user['shell'], user['sudo'])
 
 
 if __name__ == "__main__":

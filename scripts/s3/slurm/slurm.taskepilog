@@ -1,5 +1,24 @@
 #!/bin/bash
 
-# IMPORTANT: Empty script for initial deployment
+#####################################################################
+# Conducts additional operations after the job of the user is done. #
+#####################################################################
 
+# Perform common checks and set essential variables (e.g., TMPDIR)
+. /opt/slurm/etc/scripts/slurm.common --essentials
+
+# HELP-15810
+  # Keep the Neurodamus-Py log from the current step, if any
+  if [[ -n ${NEURODAMUS_PYTHON} && -n ${SLURM_STEP_ID} && ${SLURM_STEP_ID} -ne ${SLURM_INTERACTIVE_STEP} ]]; then
+    . /opt/slurm/etc/scripts/slurm.common  # Load the rest of the functionality
+    PYDAMUS_LOG=($(find ${PWD} -maxdepth 1 -type f -name "pydamus_*" -printf '%T@ %p\n' 2>/dev/null | sort -n | tail -n 1))
+
+    # Ensure that the log has not being copied before to prevent duplicates
+    if [[ -n ${PYDAMUS_LOG} && -z $(grep ${PYDAMUS_LOG[0]} $(SLURM_STEP_ID=* logfile_shm pydamus mtime) 2>/dev/null) ]]; then
+      echo ${PYDAMUS_LOG[0]} > $(logfile_shm pydamus mtime)
+      cptrim "${PYDAMUS_LOG[1]}" $(logfile_shm pydamus log)
+    fi
+  fi
+
+# Return 0 to prevent draining nodes after an error
 exit 0

@@ -25,6 +25,9 @@ HeadNode:
             - /sbo/home/resources/users.json
             - /sbo/data
         - Script: s3://sboinfrastructureassets/scripts/setup_slurm.sh
+        - Script: s3://sboinfrastructureassets/scripts/setup_environment.sh
+          Args:
+            - /sbo/data
 Scheduling:
   Scheduler: slurm
   SlurmQueues:
@@ -36,11 +39,6 @@ Scheduling:
       - InstanceType: t3.micro
       MinCount: 0
       MaxCount: 8
-    - Name: t2xlarge # testing issue with STEPS and lack of avx512
-      Instances:
-      - InstanceType: t2.xlarge
-      MinCount: 0
-      MaxCount: 2
     Networking:
       SubnetIds:
       - subnet-076ece71c00742d3c # compute
@@ -55,6 +53,7 @@ Scheduling:
           - Script: s3://sboinfrastructureassets/scripts/create_users.py
             Args:
               - /sbo/home/resources/users.json
+          - Script: s3://sboinfrastructureassets/scripts/setup_environment_compute.sh
   - Name: prod-mpi # for tightly coupled jobs
     AllocationStrategy: lowest-price
     ComputeResources:
@@ -106,6 +105,7 @@ Scheduling:
           - Script: s3://sboinfrastructureassets/scripts/create_users.py
             Args:
               - /sbo/home/resources/users.json
+          - Script: s3://sboinfrastructureassets/scripts/setup_environment_compute.sh
   - Name: prod-batch # for benchmarking
     AllocationStrategy: lowest-price
     ComputeResources:
@@ -136,6 +136,7 @@ Scheduling:
           - Script: s3://sboinfrastructureassets/scripts/create_users.py
             Args:
               - /sbo/home/resources/users.json
+          - Script: s3://sboinfrastructureassets/scripts/setup_environment_compute.sh
   SlurmSettings:
     EnableMemoryBasedScheduling: true
     CustomSlurmSettingsIncludeFile: s3://sboinfrastructureassets/config/slurm_extras.conf

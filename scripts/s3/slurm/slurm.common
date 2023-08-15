@@ -1,5 +1,96 @@
 #!/bin/bash
 
-# IMPORTANT: Empty script for initial deployment
+###################################################################
+# Contains the common variables and checks for each SLURM script. #
+###################################################################
 
-exit 0
+# Ensure that the script runs within a job allocation
+if [[ -z ${SLURM_SCRIPT_CONTEXT} ]]; then
+  exit 1
+fi
+
+# Define the essential environment for the scripts
+  SLURM_INTERACTIVE_STEP=$((0xfffffffa))   # https://github.com/SchedMD/slurm/blob/5a995f/slurm/slurm.h#L155
+  SLURM_BIN_DIR=/opt/slurm/bin             # SLURM's binaries
+  SHMDIR=/dev/shm/sim-hpc/${SLURM_JOB_ID}  # HELP-15578
+  SHMDIR_USER=/run/user/${SLURM_JOB_UID}   # HELP-9551
+  LUSTRE_MNT=/sbo/data                     # Lustre FSx mount point
+  NVME_DEV=/dev/mapper/vg.01-lv_ephemeral  # NVMe block device
+  NVME_MNT=/scratch                        # NVMe mount point
+
+  # Set the temporary directory for the allocation to use NVMe or Lustre FSx
+  [[ -b ${NVME_DEV} && -n $(findmnt ${NVME_MNT}) ]] && TMPDIR=${NVME_MNT}/slurm/jobs/${SLURM_JOB_ID} \
+                                                    || TMPDIR=${LUSTRE_MNT}/scratch/slurm/jobs/${SLURM_JOB_ID}
+
+# Skip the rest of the setup, if requested (e.g., for 'taskprolog' script)
+if [[ -n ${1} && ${1} == "--essentials" ]]; then
+  return
+fi
+
+# Define internal functionality
+  perl_cmd()     { LC_ALL="en_US.UTF-8" perl "${@}"; }  # Prevents locale warnings for some users
+  keyvalue_get() { echo -n ${1} | perl_cmd -pe "s|.*?${2}=([^ ]+).*?.*|\1|" | perl_cmd -pe "s|.*${3}.*||"; }
+  scontrol_cmd() { SLURM_TIME_FORMAT=standard ${SLURM_BIN_DIR}/scontrol show job -dd ${1:-${SLURM_JOB_ID}}; }
+  scontrol_get() { keyvalue_get "${_SCONTROL_CMD}" "${1}" "JobId"; }
+  comments_get() { keyvalue_get "${_COMMENTS_KVS}" "${1}" "="; }
+  numjobs_node() { squeue --noheader --nodelist=${SLURMD_NODENAME} ${@} | wc -l; }
+  logfile()      { echo ${3:-${SLURM_LOG_DIR}}/${SLURM_LOG_PREFIX}-${1}.${2:-"txt"}; }
+  logfile_shm()  { logfile ${1}-${SLURM_STEP_ID} ${2:-"txt"} ${SHMDIR}; }
+  create_dir()   { [[ -n ${1} && ! -d "${1}" ]] && $(mkdir -p "${1}"; chown ${SLURM_JOB_USER}:sbo "${1}"; chmod 700 "${1}"); }
+  cptrim() {
+    if [[ -f "${1}" ]]; then
+      local max_size=$((${3:-16} << 20))  # 16MB by default
+      
+      if [[ $(stat -c%s "${1}") -gt ${max_size} ]]; then
+        head -c $((max_size / 2)) "${1}" > ${2}
+        echo -e "\n\n----- HEAD & FOOTER OF FILE ONLY ($((max_size >> 20))MB LIMIT) -----\n\n" >> ${2}
+        tail -c $((max_size / 2)) "${1}" >> ${2}
+      else
+        cp -f "${1}" ${2}
+      fi
+    fi
+  }
+  cloudwatch_urls() {
+    local url_global="https://us-east-1.console.aws.amazon.com/cloudwatch/home?region=us-east-1#dashboards/dashboard/hpc-cluster-us-east-1"
+    local start="$(scontrol_get StartTime)"
+    local end="${2:-}"  # $(scontrol_get EndTime)
+    local refresh=$([[ -n ${1} ]] && echo "&autoRefresh=${1}")
+    local time_settings="start=${start}&end=${end}${refresh}"
+
+    echo -e "Global Metrics\n--------------\n  ${url_global}?${time_settings}\n"
+  }
+
+# Cache command outputs for performance reasons (see https://slurm.schedmd.com/prolog_epilog.html)
+  _SCONTROL_CMD=$(scontrol_cmd)
+  _COMMENTS_KVS=$(scontrol_get Comment | sed "s| ||g" | sed "s|,| |g")
+
+# Define the rest of the environment for the scripts
+  # Generate the real / extended job ID, useful in job arrays
+  if [[ -z $(scontrol_get ArrayJobId) ]]; then
+    _JOB_ID=${SLURM_JOB_ID}
+    SLURM_JOB_ID_EXT=${SLURM_JOB_ID}
+  else
+    _JOB_ID=$(scontrol_get ArrayJobId)
+    SLURM_JOB_ID_EXT=${_JOB_ID}_$(scontrol_get ArrayTaskId)
+
+    # Estimate info about first task for the job / Note: ENV not available in prolog & epilog
+    _SCONTROL_CMD_MIN=$(echo -n $(scontrol_cmd ${_JOB_ID}) | sed -r "s|.*(JobId=.*)|\1|")
+    SLURM_ARRAY_TASK_MIN=$(_SCONTROL_CMD=${_SCONTROL_CMD_MIN} scontrol_get ArrayTaskId)
+    SLURM_ARRAY_TASK_MIN_STARTTIME=$(_SCONTROL_CMD=${_SCONTROL_CMD_MIN} scontrol_get StartTime)
+    SLURM_JOB_ID_EXT_MIN=${_JOB_ID}_${SLURM_ARRAY_TASK_MIN}
+  fi
+
+  # Set the state location for the job
+  SLURM_STATE_DIR=$(grep SlurmdSpoolDir /opt/slurm/etc/slurm.conf | cut -d'=' -f2)
+  SLURM_JOB_SCRIPT=$(realpath ${SLURM_STATE_DIR}/job*${SLURM_JOB_ID}/slurm_script 2>/dev/null)
+
+  # INFRA-2142
+    _BASE_LOG_DIR=${LUSTRE_MNT}/scratch/slurm/logs
+    _SUBMIT_DATE=$(scontrol_get SubmitTime | perl_cmd -pe "s|^([0-9]{4})-([0-9]{2}).*|\1/\2|")
+
+    SLURM_LOG_DIR=${_BASE_LOG_DIR}/${_SUBMIT_DATE}
+    SLURM_LOG_PREFIX=${SLURM_JOB_ID_EXT}-$(scontrol_get StartTime)
+    SLURM_LOG_PREFIX_MIN=${SLURM_JOB_ID_EXT_MIN}-${SLURM_ARRAY_TASK_MIN_STARTTIME}
+
+  # Clear unnecesary private variables
+  unset _JOB_ID _SCONTROL_CMD_MIN _BASE_LOG_DIR _SUBMIT_DATE

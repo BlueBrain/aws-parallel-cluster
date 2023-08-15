@@ -87,8 +87,9 @@ post_deploy:
     - |
       if [ "$PCLUSTER_ACTION" = "create" ]; then
           bash scripts/setup_lustre_dra.sh
-          bash scripts/update_dns_record.sh
+          bash scripts/wait_for_deployment.sh  # Note: Script waits until cluster is deployed
           bash scripts/setup_lustre_logs.sh
+          bash scripts/update_dns_record.sh
       else # PCLUSTER_ACTION = update
           cluster_status=$(pcluster describe-cluster --cluster-name hpc-cluster --query clusterStatus)
           while [[ "$cluster_status" != *"UPDATE_COMPLETE"* ]]; do

@@ -1,16 +1,5 @@
 #!/bin/bash
 
-# Make sure the cluster is ready
-echo "Checking if the cluster is ready"
-cluster_status=$(pcluster describe-cluster -n hpc-cluster | jq -r .clusterStatus)
-while [ "$cluster_status" != "CREATE_COMPLETE" ]
-do 
-    echo "Cluster is not yet ready, status is ${cluster_status}"
-    sleep 5s
-    cluster_status=$(pcluster describe-cluster -n hpc-cluster | jq -r .clusterStatus)
-done
-echo "The cluster is ready"
-
 # Get the ID of the dns zone
 zone_id=$(aws route53 list-hosted-zones-by-name | jq -r '.HostedZones[] | select(.Name=="shapes-registry.org.") | .Id')
 echo "Zone id: ${zone_id}"

@@ -1,5 +1,50 @@
 #!/bin/bash
 
-# IMPORTANT: Empty script for initial deployment
+#####################################################################
+# Configures the environment for the user before launching its job. #
+#####################################################################
 
+# Perform common checks and set essential variables (e.g., TMPDIR)
+. /opt/slurm/etc/scripts/slurm.common --essentials
+
+# Keep the job environment from the user if not stored yet
+  if [[ ! -f $(realpath ${SHMDIR}/*-env.sh) ]]; then
+    . /opt/slurm/etc/scripts/slurm.common  # Load the rest of the functionality
+    if [[ -f ${SLURM_JOB_SCRIPT} ]]; then
+      cp ${SLURM_JOB_SCRIPT} $(logfile script sh ${SHMDIR})
+    fi
+    env > $(logfile env sh ${SHMDIR})
+  fi
+
+# Configure behaviour if any task exits with non-zero
+  echo "export SLURM_KILL_BAD_EXIT=1"
+
+# HELP-9706
+  # Export the ENV variable of the temporary directory
+  echo "export TMPDIR=${TMPDIR}"
+
+  # Warn users when a node cannot access its own NVMe mount point
+  if [[ -b ${NVME_DEV} && -z $(findmnt ${NVME_MNT}) ]]; then
+    echo "print [${SLURMD_NODENAME}] WARNING: '${NVME_MNT}' not available. Please, report issue to HPC Team and Core Services."
+  fi
+
+# HELP-15578
+  # Export the ENV variable of the SHM directory
+  echo "export SHMDIR=${SHMDIR}"
+
+# HELP-15810
+  # Export the ENV variable to configure Caliper with a suffix per step
+  if  [[ -n ${NEURODAMUS_CALI_ENABLED} && "${CALI_MPIREPORT_FILENAME}" == "/dev/null" && -n ${SLURM_NTASKS} ]]; then
+    . /opt/slurm/etc/scripts/slurm.common  # Load the rest of the functionality
+    echo "export CALI_MPIREPORT_FILENAME=$(logfile_shm perf json)"
+  fi
+
+# BBPP154-53 + HPCTM-1782
+  # If Intel MPI is loaded and not included in the Singularity list, add its libraries
+  if [[ -n ${I_MPI_ROOT} && ${SINGULARITY_CONTAINLIBS} != *${I_MPI_ROOT}* ]]; then
+    I_MPI_LIBRARIES=$(find ${I_MPI_ROOT}/lib/release -type f | tr '\n' ',')
+    echo "export SINGULARITY_CONTAINLIBS=$(echo -n ${I_MPI_LIBRARIES}${SINGULARITY_CONTAINLIBS} | sed -r "s|(.*),$|\1|")"
+  fi
+
+# Return 0 to prevent draining nodes after an error
 exit 0
