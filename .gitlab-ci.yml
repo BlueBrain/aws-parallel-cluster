@@ -1,3 +1,9 @@
+workflow:
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_PIPELINE_SOURCE == "web"
+
 stages:
  - info
  - start
@@ -30,11 +36,19 @@ stages:
     - |
       if $(pcluster list-clusters | grep -q hpc-cluster); then
           echo "Cluster exists, will attempt to update."
-          echo -n "Checking fleet status: "
-          fleet_status=$(pcluster describe-compute-fleet --cluster-name hpc-cluster --query status)
-          if [[ "$fleet_status" != *"STOPPED"* ]]; then
-              echo "Fleet is not stopped, please stop and rerun validation."
-              exit 1
+          if [ "$DRYRUN" = "true" ]; then
+              echo "Dry-running - attempting with a fake cluster first"
+              set +e
+              pcluster create-cluster --cluster-configuration ./config/compute-cluster.yaml --cluster-name fufu-cluster --dryrun $DRYRUN 2>&1 > fufu-pcluster-output.log
+              cat fufu-pcluster-output.log | grep -q "Request would have succeeded, but DryRun flag is set\|No changes found"
+              exitcode=$?
+              if [ "${exitcode}" != 0 ]; then
+                  echo "Fake cluster failed"
+                  cat fufu-pcluster-output.log
+                  exit ${exitcode}
+              fi
+              set -e
+              echo "Fake cluster succeeded, now let's try with the real cluster"
           fi
           echo "PCLUSTER_ACTION=update" > build.env
           set +e
@@ -55,7 +69,12 @@ stages:
           test $pcluster_status -eq 0
           pcluster describe-cluster --cluster-name hpc-cluster
       else
-          cat pcluster-output.log | grep -q "Request would have succeeded, but DryRun flag is set\|No changes found"
+          if [ -z $CI_MERGE_REQUEST_IID ]; then
+            test $pcluster_status -eq 0
+          else
+            pip install requests furl
+            python check_validation_output.py
+          fi
       fi
 
 # the update/create commands always return with an error code when you use --dryrun true, even when the validation succeeded and there are no errors => parsing the output afterwards
@@ -72,7 +91,7 @@ deploy:
     DRYRUN: "false"
   extends: .update_or_create_cluster
   rules:
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_BRANCH == "main"
   artifacts:
     reports:
       dotenv: build.env
@@ -101,7 +120,7 @@ post_deploy:
           pcluster update-compute-fleet --cluster-name hpc-cluster --status START_REQUESTED
       fi
   rules:
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_BRANCH == "main"
 
 
 push_scripts:
@@ -111,7 +130,7 @@ push_scripts:
     - aws s3 sync ./config/s3 s3://sboinfrastructureassets/config/
     - aws s3 sync ./scripts/s3 s3://sboinfrastructureassets/scripts/
   rules:
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_BRANCH == "main"
 
 destroy:
   stage: start
@@ -130,6 +149,8 @@ destroy:
       done
       set -e
       echo ${cluster_status}
+  rules:
+    - if: $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME == "staging" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
 
 print_info:
   stage: info
@@ -233,6 +254,9 @@ stop_compute_fleet:
           fleet_status=$(pcluster describe-compute-fleet --cluster-name hpc-cluster --query status)
       done
       echo "Done."
+  rules:
+    - if: $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME == "staging" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
+
 
 delete_cloudformation_stack:
   stage: info
@@ -242,6 +266,9 @@ delete_cloudformation_stack:
     - aws cloudformation list-stacks
     - aws cloudformation delete-stack --stack-name alinux2-sbo-pcluster-v1
     - aws cloudformation list-stacks
+  rules:
+    - if: $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME == "staging" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
+
 
 debug_image:
   stage: info
