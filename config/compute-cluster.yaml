@@ -13,6 +13,7 @@ HeadNode:
   Iam:
     S3Access:
       - BucketName: sboinfrastructureassets
+        EnableWriteAccess: True
   CustomActions:
     OnNodeConfigured:
       Sequence:
