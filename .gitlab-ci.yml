@@ -32,6 +32,7 @@ stages:
 .update_or_create_cluster:
   extends: .pcluster
   script:
+    - set -x
     - pcluster list-clusters
     - |
       if $(pcluster list-clusters | grep -q hpc-cluster); then
@@ -65,12 +66,13 @@ stages:
       fi
     - |
       cat pcluster-output.log
+      echo "====="
       if [ "$DRYRUN" = "false" ]; then
           test $pcluster_status -eq 0
           pcluster describe-cluster --cluster-name hpc-cluster
       else
           if [ -z $CI_MERGE_REQUEST_IID ]; then
-            test $pcluster_status -eq 0
+            cat pcluster-output.log | grep -q "Request would have succeeded, but DryRun flag is set\|No changes found"
           else
             pip install requests furl
             python check_validation_output.py
