@@ -45,7 +45,7 @@
     I_MPI_LIBRARIES=$(find ${I_MPI_ROOT}/lib/release/* | tr '\n' ',')
     echo "export SINGULARITY_CONTAINLIBS=$(echo -n ${I_MPI_LIBRARIES}${SINGULARITY_CONTAINLIBS} | sed -r "s|(.*),$|\1|")"
     echo "export SINGULARITY_BINDPATH=$(echo -n ${I_MPI_ROOT}/libfabric/lib,${I_MPI_ROOT}/etc,${SINGULARITY_BINDPATH} | sed -r "s|(.*),$|\1|")"
-    echo "export SINGULARITYENV_LD_PRELOAD=\"/.singularity.d/libs/libmpi.so\""
+    echo "export SINGULARITYENV_LD_PRELOAD=/.singularity.d/libs/libmpi.so"
   fi
 
 # Return 0 to prevent draining nodes after an error
