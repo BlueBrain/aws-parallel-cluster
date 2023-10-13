@@ -115,7 +115,7 @@ post_deploy:
           cluster_status=$(pcluster describe-cluster --cluster-name hpc-cluster --query clusterStatus)
           while [[ "$cluster_status" != *"UPDATE_COMPLETE"* ]]; do
               sleep 10
-              echo "Waiting for cluster to finish updating  (current status: $fleet_status)..."
+              echo "Waiting for cluster to finish updating  (current status: $cluster_status)..."
               cluster_status=$(pcluster describe-cluster --cluster-name hpc-cluster --query clusterStatus)
           done
           echo "Done. restarting compute fleet"

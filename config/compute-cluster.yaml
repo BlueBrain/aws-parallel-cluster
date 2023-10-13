@@ -57,6 +57,9 @@ Scheduling:
             Args:
               - /sbo/home/resources/users.json
           - Script: s3://sboinfrastructureassets/scripts/setup_environment_compute.sh
+    CustomSlurmSettings:
+      MaxNodes: 8
+      MaxTime: 1-00:00:00
   - Name: prod-mpi # for tightly coupled jobs
     AllocationStrategy: lowest-price
     ComputeResources:
