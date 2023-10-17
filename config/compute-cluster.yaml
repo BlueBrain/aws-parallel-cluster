@@ -1,7 +1,7 @@
 Region: us-east-1
 Image:
   Os: alinux2
-  CustomAmi: ami-036a6565c4274982e
+  CustomAmi: ami-081360f17c6e0bb4d
 HeadNode:
   InstanceType: t3.micro
   Networking:
@@ -17,6 +17,7 @@ HeadNode:
   CustomActions:
     OnNodeConfigured:
       Sequence:
+        - Script: s3://sboinfrastructureassets/scripts/install_packages.sh
         - Script: s3://sboinfrastructureassets/scripts/create_users.py
           Args:
             - /sbo/home/resources/users.json

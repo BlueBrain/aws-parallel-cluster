@@ -6,18 +6,19 @@ workflow:
 
 stages:
  - info
+ - build
  - start
  - deploy
 
 .aws-cli:
-  image: public.ecr.aws/aws-cli/aws-cli:2.11.27
+  image: public.ecr.aws/aws-cli/aws-cli:2.13.26
   before_script:
     - mkdir -p ~/.aws/
     - echo -e "[default]\naws_access_key_id = ${AWS_ACCESS_KEY}\naws_secret_access_key = ${AWS_SECRET_ACCESS_KEY}\n" > ~/.aws/credentials
     - echo -e "[default]\nregion = us-east-1\noutput = json\n" > ~/.aws/config
 
 .pcluster:
-  image: public.ecr.aws/parallelcluster/pcluster-api:3.6.0
+  image: public.ecr.aws/parallelcluster/pcluster-api:3.7.1
   before_script:
     - |
       # Install the aws cli
@@ -204,15 +205,15 @@ update_components:
       #- aws imagebuilder create-component --name singularity --semantic-version "1.0.3" --change-description "Improve error handling" --platform "Linux" --uri "s3://sboinfrastructureassets/components/singularity_component.yaml"
 
 build_image:
-  stage: deploy
+  stage: build
   extends: .pcluster
   when: manual
   script:
-    - pcluster build-image --image-configuration ./config/custom_al2_ami_config.yaml --image-id alinux2-sbo-pcluster-v2
+    - pcluster build-image --image-configuration ./config/custom_al2_x86_ami_config.yaml --image-id alinux2-x86-sbo-pcluster-v3
     - pcluster list-images --image-status PENDING
 
 delete_image:
-  stage: deploy
+  stage: build
   extends: .pcluster
   when: manual
   variables:
@@ -273,13 +274,13 @@ delete_cloudformation_stack:
 
 
 debug_image:
-  stage: info
+  stage: build
   extends: .pcluster
   when: manual
   script:
-    - pcluster describe-image --image-id alinux2-sbo-pcluster-v1
-    - pcluster list-image-log-streams --image-id alinux2-sbo-pcluster-v1 --query 'logStreams[*].logStreamName'
-    - pcluster get-image-log-events --image-id alinux2-sbo-pcluster-v1 --log-stream-name 3.6.0/1 | tee build_log.json
+    - pcluster describe-image --image-id alinux2-x86-sbo-pcluster-v3
+    - pcluster list-image-log-streams --image-id alinux2-x86-sbo-pcluster-v3 --query 'logStreams[*].logStreamName'
+    - pcluster get-image-log-events --image-id alinux2-x86-sbo-pcluster-v3 --log-stream-name 3.7.1/1 | tee build_log.json
   artifacts:
     paths:
       - build_log.json

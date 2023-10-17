@@ -143,6 +143,14 @@ def main():
             "we'll comment on the merge request (if there is one) and let the job succeed."
         )
         comment_if_necessary(cannot_update_messages)
+    elif (
+        "the update can be performed only with the same ParallelCluster version"
+        in pcluster_output.get("message")
+    ):
+        print(
+            "parallel-cluster update is happening."
+            "Since otherwise no errors were raised, we carry on."
+        )
     else:
         print(
             "If we get here, there were probably no issues, but we'll check to make sure. "
