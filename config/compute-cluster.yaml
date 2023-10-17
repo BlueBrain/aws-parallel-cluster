@@ -151,6 +151,11 @@ Scheduling:
       #  - InstanceType: m7g.16xlarge
       #  MinCount: 0
       #  MaxCount: 1
+    - Name: c7a-48xlarge
+      Instances:
+      - InstanceType: c7a.48xlarge
+      MinCount: 0
+      MaxCount: 1
     - Name: m7a-48xlarge
       Instances:
       - InstanceType: m7a.48xlarge
@@ -176,9 +181,9 @@ Scheduling:
         #  - InstanceType: c7g.16xlarge
         #  MinCount: 0
         #  MaxCount: 1
-    - Name: c6i-24xlarge
+    - Name: c6i-32xlarge
       Instances:
-      - InstanceType: c6i.24xlarge
+      - InstanceType: c6i.32xlarge
       MinCount: 0
       MaxCount: 1
     - Name: c6a-48xlarge
