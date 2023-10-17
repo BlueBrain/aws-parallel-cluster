@@ -47,7 +47,7 @@
     echo "export SINGULARITY_BINDPATH=$(echo -n ${I_MPI_ROOT}/libfabric/lib,${I_MPI_ROOT}/etc,${SINGULARITY_BINDPATH} | sed -r "s|(.*),$|\1|")"
     echo "export SINGULARITYENV_LD_PRELOAD=/.singularity.d/libs/libmpi.so"
     # Check whether "EFA" is supported in this compute instance and force enable it if it is
-    if [[ $(fi_info -p efa -t FI_EP_RDM 2>&1 | grep -e "provider: efa") ]]; then
+    if [[ -n $(fi_info -p efa -t FI_EP_RDM 2>&1 | grep -e "provider: efa") ]]; then
         echo "export I_MPI_OFI_LIBRARY_INTERNAL=0"
         echo "export I_MPI_OFI_PROVIDER=efa"
     fi
