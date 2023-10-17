@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -x
+
 UNITFILE=/etc/systemd/system/nexus-storage.service
 
 cat <<EOF >$UNITFILE 
