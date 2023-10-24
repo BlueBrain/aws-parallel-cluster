@@ -108,7 +108,7 @@ Scheduling:
       - sg-0b5941ba4f4d1a9ff # sbo-poc-compute / hpc
       - sg-0184e34d690eddb22 # sbo-poc-compute / hpc_efa
     CustomSlurmSettings:
-      MaxNodes: 4
+      MaxNodes: 6
       MaxTime: 120
     Iam:
       S3Access:
