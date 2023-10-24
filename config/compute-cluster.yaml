@@ -82,7 +82,14 @@ Scheduling:
       Instances:
       - InstanceType: c7a.48xlarge # compute optimized nodes
       MinCount: 0
-      MaxCount: 5 # upper limit for largest PoC case defined in cost estimation sheet
+      MaxCount: 5 # least number of nodes needed to simulate the full O1 circuit
+      Efa: # low-latency, high BW network
+        Enabled: true # https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/efa-start.html#efa-start-security
+    - Name: cpu-m7a
+      Instances:
+      - InstanceType: m7a.48xlarge # general purpose nodes with large memory capacity
+      MinCount: 0
+      MaxCount: 4 # number of nodes needed to simulate the full O1 circuit
       Efa: # low-latency, high BW network
         Enabled: true # https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/efa-start.html#efa-start-security
     - Name: cpu-m5n
