@@ -3,7 +3,7 @@ Image:
   Os: alinux2
   CustomAmi: ami-081360f17c6e0bb4d
 HeadNode:
-  InstanceType: t3.micro
+  InstanceType: t3.medium
   Networking:
     SubnetId: subnet-076ece71c00742d3c # compute
     SecurityGroups:
