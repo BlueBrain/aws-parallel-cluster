@@ -4,7 +4,7 @@ set -x
 
 UNITFILE=/etc/systemd/system/nexus-storage.service
 
-cat <<EOF >$UNITFILE 
+cat <<\EOF >$UNITFILE
 [Unit]
 Description=Nexus Storage
 After=network.target
