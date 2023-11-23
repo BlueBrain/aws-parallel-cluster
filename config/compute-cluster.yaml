@@ -82,7 +82,7 @@ Scheduling:
       Instances:
       - InstanceType: c7a.48xlarge # compute optimized nodes
       MinCount: 0
-      MaxCount: 5 # least number of nodes needed to simulate the full O1 circuit
+      MaxCount: 10 # least number of nodes needed to simulate the full O1 circuit
       Efa: # low-latency, high BW network
         Enabled: true # https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/efa-start.html#efa-start-security
     - Name: cpu-m7a
@@ -116,7 +116,7 @@ Scheduling:
       - sg-0184e34d690eddb22 # sbo-poc-compute / hpc_efa
     CustomSlurmSettings:
       MaxNodes: 6
-      MaxTime: 120
+      MaxTime: 720
     Iam:
       S3Access:
         - BucketName: sboinfrastructureassets
