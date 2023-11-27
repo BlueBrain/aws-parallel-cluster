@@ -64,39 +64,11 @@ Scheduling:
   - Name: prod-mpi # for tightly coupled jobs
     AllocationStrategy: lowest-price
     ComputeResources:
-    - Name: cpu-c5n
-      Instances:
-      - InstanceType: c5n.18xlarge # compute optimized nodes
-      MinCount: 0
-      MaxCount: 10 # upper limit for largest PoC case defined in cost estimation sheet
-      Efa: # low-latency, high BW network
-        Enabled: true # https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/efa-start.html#efa-start-security
-    - Name: cpu-c6in
-      Instances:
-      - InstanceType: c6in.32xlarge # compute optimized nodes
-      MinCount: 0
-      MaxCount: 10 # upper limit for largest PoC case defined in cost estimation sheet
-      Efa: # low-latency, high BW network
-        Enabled: true # https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/efa-start.html#efa-start-security
     - Name: cpu-c7a
       Instances:
       - InstanceType: c7a.48xlarge # compute optimized nodes
       MinCount: 0
-      MaxCount: 10 # least number of nodes needed to simulate the full O1 circuit
-      Efa: # low-latency, high BW network
-        Enabled: true # https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/efa-start.html#efa-start-security
-    - Name: cpu-m7a
-      Instances:
-      - InstanceType: m7a.48xlarge # general purpose nodes with large memory capacity
-      MinCount: 0
-      MaxCount: 4 # number of nodes needed to simulate the full O1 circuit
-      Efa: # low-latency, high BW network
-        Enabled: true # https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/efa-start.html#efa-start-security
-    - Name: cpu-m5n
-      Instances:
-      - InstanceType: m5n.24xlarge # compute optimized nodes
-      MinCount: 0
-      MaxCount: 10 # upper limit for largest PoC case defined in cost estimation sheet
+      MaxCount: 10 # least number of nodes needed to simulate the full O1 circuit x2
       Efa: # low-latency, high BW network
         Enabled: true # https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/efa-start.html#efa-start-security
     - Name: nvme
@@ -115,7 +87,7 @@ Scheduling:
       - sg-0b5941ba4f4d1a9ff # sbo-poc-compute / hpc
       - sg-0184e34d690eddb22 # sbo-poc-compute / hpc_efa
     CustomSlurmSettings:
-      MaxNodes: 6
+      MaxNodes: 20
       MaxTime: 720
     Iam:
       S3Access:
@@ -156,104 +128,6 @@ Scheduling:
     CustomSlurmSettings:
       MaxNodes: 4
       MaxTime: 120
-    Iam:
-      S3Access:
-        - BucketName: sboinfrastructureassets
-    CustomActions:
-      OnNodeConfigured:
-        Sequence:
-          - Script: s3://sboinfrastructureassets/scripts/create_users.py
-            Args:
-              - /sbo/home/resources/users.json
-          - Script: s3://sboinfrastructureassets/scripts/setup_environment_compute.sh
-  - Name: special-bench # for benchmarking
-    AllocationStrategy: lowest-price
-    ComputeResources:
-      #- Name: m7g.16xlarge
-      #  Instances:
-      #  - InstanceType: m7g.16xlarge
-      #  MinCount: 0
-      #  MaxCount: 1
-    - Name: c7a-48xlarge
-      Instances:
-      - InstanceType: c7a.48xlarge
-      MinCount: 0
-      MaxCount: 1
-    - Name: m7a-48xlarge
-      Instances:
-      - InstanceType: m7a.48xlarge
-      MinCount: 0
-      MaxCount: 1
-    - Name: m6i-32xlarge
-      Instances:
-      - InstanceType: m6i.32xlarge
-      MinCount: 0
-      MaxCount: 1
-    - Name: m5-24xlarge
-      Instances:
-      - InstanceType: m5.24xlarge
-      MinCount: 0
-      MaxCount: 1
-    - Name: m4-16xlarge
-      Instances:
-      - InstanceType: m4.16xlarge
-      MinCount: 0
-      MaxCount: 1
-        #- Name: c7g.16xlarge
-        #  Instances:
-        #  - InstanceType: c7g.16xlarge
-        #  MinCount: 0
-        #  MaxCount: 1
-    - Name: c6i-32xlarge
-      Instances:
-      - InstanceType: c6i.32xlarge
-      MinCount: 0
-      MaxCount: 1
-    - Name: c6a-48xlarge
-      Instances:
-      - InstanceType: c6a.48xlarge
-      MinCount: 0
-      MaxCount: 1
-    - Name: c5-24xlarge
-      Instances:
-      - InstanceType: c5.24xlarge
-      MinCount: 0
-      MaxCount: 1
-    - Name: c4-8xlarge
-      Instances:
-      - InstanceType: c4.8xlarge
-      MinCount: 0
-      MaxCount: 1
-        #- Name: hpc7g.16xlarge
-        #  Instances:
-        #  - InstanceType: hpc7g.16xlarge
-        #  MinCount: 0
-        #  MaxCount: 1
-        #- Name: hpc7a.96xlarge (unavailable in us-east-1)
-        #  Instances:
-        #  - InstanceType: hpc7a.96xlarge
-        #  MinCount: 0
-        #  MaxCount: 1
-        #- Name: hpc6id.32xlarge
-        #  Instances:
-        #  - InstanceType: hpc6id.32xlarge
-        #  MinCount: 0
-        #  MaxCount: 1
-        #- Name: hpc6a.48xlarge
-        #  Instances:
-        #  - InstanceType: hpc6a.48xlarge
-        #  MinCount: 0
-        #  MaxCount: 1
-    Networking:
-      PlacementGroup: # try to place nodes close to each other
-        Enabled: false
-      SubnetIds:
-      - subnet-076ece71c00742d3c # compute
-      SecurityGroups:
-      - sg-0b5941ba4f4d1a9ff # sbo-poc-compute / hpc
-    CustomSlurmSettings:
-      MaxNodes: 1
-      MaxTime: 60
     Iam:
       S3Access:
         - BucketName: sboinfrastructureassets
