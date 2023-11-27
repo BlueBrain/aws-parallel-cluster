@@ -138,6 +138,14 @@ Scheduling:
       Efa: # low-latency, high BW network
         Enabled: false # enable after security groups have been updated
                        # https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/efa-start.html#efa-start-security
+    - Name: cpu-c7a
+      Instances:
+      - InstanceType: c7a.48xlarge # general purpose nodes
+      MinCount: 0
+      MaxCount: 10 # upper limit for largest PoC case defined in cost estimation sheet
+      Efa: # low-latency, high BW network
+        Enabled: false # enable after security groups have been updated
+                       # https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/efa-start.html#efa-start-security
     Networking:
       PlacementGroup: # try to place nodes close to each other
         Enabled: false
