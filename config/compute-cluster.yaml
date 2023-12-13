@@ -34,6 +34,13 @@ HeadNode:
         - Script: s3://sboinfrastructureassets/scripts/setup_nexus_storage_service.sh
 Scheduling:
   Scheduler: slurm
+  SlurmSettings:
+    EnableMemoryBasedScheduling: true
+    CustomSlurmSettingsIncludeFile: s3://sboinfrastructureassets/config/slurm_extras.conf
+    Database:
+      Uri: hpc-slurm-db.ctydazornca3.us-east-1.rds.amazonaws.com:3306
+      UserName: slurm_admin
+      PasswordSecretArn: arn:aws:secretsmanager:us-east-1:671250183987:secret:hpc_slurm_db_password-6LNuBy
   SlurmQueues:
   - Name: debug # for testing purposes
     AllocationStrategy: lowest-price
@@ -138,9 +145,6 @@ Scheduling:
             Args:
               - /sbo/home/resources/users.json
           - Script: s3://sboinfrastructureassets/scripts/setup_environment_compute.sh
-  SlurmSettings:
-    EnableMemoryBasedScheduling: true
-    CustomSlurmSettingsIncludeFile: s3://sboinfrastructureassets/config/slurm_extras.conf
 Imds:
   ImdsSupport: v2.0
 SharedStorage:
