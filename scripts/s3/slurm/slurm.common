@@ -33,7 +33,7 @@ fi
   scontrol_cmd() { SLURM_TIME_FORMAT=standard ${SLURM_BIN_DIR}/scontrol show job -dd ${1:-${SLURM_JOB_ID}}; }
   scontrol_get() { keyvalue_get "${_SCONTROL_CMD}" "${1}" "JobId"; }
   comments_get() { keyvalue_get "${_COMMENTS_KVS}" "${1}" "="; }
-  numjobs_node() { squeue --noheader --nodelist=${SLURMD_NODENAME} ${@} | wc -l; }
+  numjobs_node() { ${SLURM_BIN_DIR}/squeue --noheader --nodelist=${SLURMD_NODENAME} ${@} | wc -l; }
   logfile()      { echo ${3:-${SLURM_LOG_DIR}}/${SLURM_LOG_PREFIX}-${1}.${2:-"txt"}; }
   logfile_shm()  { logfile ${1}-${SLURM_STEP_ID} ${2:-"txt"} ${SHMDIR}; }
   create_dir()   { [[ -n ${1} && ! -d "${1}" ]] && $(mkdir -p "${1}"; chown ${SLURM_JOB_USER}:sbo "${1}"; chmod 700 "${1}"); }
