@@ -260,6 +260,30 @@ stop_compute_fleet:
   rules:
     - if: $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME == "staging" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
 
+dra_describe:
+  stage: info
+  extends: .pcluster
+  when: manual
+  allow_failure: true
+  script:
+    - aws fsx describe-data-repository-associations
+  
+dra_redeploy:
+  stage: info
+  extends: .pcluster
+  when: manual
+  allow_failure: true
+  script:
+    - DRA_IDS=($(aws fsx describe-data-repository-associations --query Associations[*].AssociationId --output text))
+    - for dra_id in ${DRA_IDS[@]}; do
+    -   echo "Deleting DRA '${dra_id}' from Lustre FSx..."
+    -   aws fsx delete-data-repository-association --association-id ${dra_id} --delete-data-in-file-system
+    - done
+    - while [[ -n $(aws fsx describe-data-repository-associations --query Associations[*].AssociationId --output text) ]]; do 
+    -   echo "DRAs not deleted yet, waiting..."
+    -   sleep 5s
+    - done
+    - bash ./scripts/setup_lustre_dra.sh
 
 delete_cloudformation_stack:
   stage: info
