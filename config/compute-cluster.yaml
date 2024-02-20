@@ -160,6 +160,7 @@ SharedStorage:
     StorageType: FsxLustre
     MountDir: /sbo/data
     FsxLustreSettings:
-      DeploymentType: SCRATCH_2
-      StorageCapacity: 1200  # Setup Lustre for 1.2TiB (minimum allowed)
+      DeploymentType: PERSISTENT_2
+      StorageCapacity: 1200  # Setup Lustre FSx for 1.2TiB (minimum allowed)
+      PerUnitStorageThroughput: 250  # Request a bandwidth of 250Mbps/TiB (similar to SCRATCH_2)
       DataCompressionType: LZ4  # Data compression for higher-throughput between OSSs <-> OSTs
