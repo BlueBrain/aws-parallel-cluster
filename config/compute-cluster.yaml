@@ -61,6 +61,7 @@ Scheduling:
     CustomActions:
       OnNodeConfigured:
         Sequence:
+          - Script: s3://sboinfrastructureassets/scripts/install_packages.sh
           - Script: s3://sboinfrastructureassets/scripts/create_users.py
             Args:
               - /sbo/home/resources/users.json
@@ -102,6 +103,7 @@ Scheduling:
     CustomActions:
       OnNodeConfigured:
         Sequence:
+          - Script: s3://sboinfrastructureassets/scripts/install_packages.sh
           - Script: s3://sboinfrastructureassets/scripts/create_users.py
             Args:
               - /sbo/home/resources/users.json
@@ -141,6 +143,7 @@ Scheduling:
     CustomActions:
       OnNodeConfigured:
         Sequence:
+          - Script: s3://sboinfrastructureassets/scripts/install_packages.sh
           - Script: s3://sboinfrastructureassets/scripts/create_users.py
             Args:
               - /sbo/home/resources/users.json
