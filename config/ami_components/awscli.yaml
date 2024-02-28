@@ -1,0 +1,24 @@
+name: awscli
+description: Install AWS CLI
+schemaVersion: 1.0
+phases:
+  - name: build
+    steps:
+     - name: InstallAwsCli
+       action: ExecuteBash
+       inputs:
+         commands:
+           - |
+            yum remove -y awscli
+            curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "/tmp/awscliv2.zip"
+            unzip /tmp/awscliv2.zip -d /tmp/awscliv2
+            /tmp/awscliv2/aws/install
+            rm -rf /tmp/awscliv2*
+  - name: test
+    steps:
+      - name: TestAwsCli
+        action: ExecuteBash
+        inputs:
+          commands:
+            - which aws && aws --version
+

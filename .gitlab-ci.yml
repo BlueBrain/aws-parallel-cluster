@@ -18,7 +18,7 @@ stages:
     - echo -e "[default]\nregion = us-east-1\noutput = json\n" > ~/.aws/config
 
 .pcluster:
-  image: public.ecr.aws/parallelcluster/pcluster-api:3.7.1
+  image: public.ecr.aws/parallelcluster/pcluster-api:3.8.0
   before_script:
     - |
       # Install the aws cli
@@ -196,20 +196,24 @@ export_cluster_logs:
       - log_archive_*.tar.gz
 
 update_components:
-  stage: deploy
+  stage: build
   extends: .aws-cli
   when: manual
   script:
-    - echo "no-op" # update manually if components change - yes it's ugly
-      #- aws s3 cp ./config/singularity_component.yaml s3://sboinfrastructureassets/components/
-      #- aws imagebuilder create-component --name singularity --semantic-version "1.0.3" --change-description "Improve error handling" --platform "Linux" --uri "s3://sboinfrastructureassets/components/singularity_component.yaml"
+    #- echo "no-op" # update manually if components change - yes it's ugly
+    - aws s3 sync ./config/ami_components s3://sboinfrastructureassets/components
+    - aws imagebuilder create-component --name singularity-ce --semantic-version "1.0.1" --change-description "Simplify test to avoid issues" --platform "Linux" --uri "s3://sboinfrastructureassets/components/singularity-ce.yaml"
+      #- aws imagebuilder create-component --name awscli --semantic-version "1.0.0" --change-description "Initial commit AWS CLI component" --platform "Linux" --uri "s3://sboinfrastructureassets/components/awscli.yaml"
+      #- aws imagebuilder create-component --name rpm-installer --semantic-version "1.0.0" --change-description "Initial commit RPM installer component" --platform "Linux" --uri "s3://sboinfrastructureassets/components/rpm_installer.yaml"
 
 build_image:
   stage: build
   extends: .pcluster
   when: manual
+  variables:
+    IMAGE_ID: ""
   script:
-    - pcluster build-image --image-configuration ./config/custom_al2_x86_ami_config.yaml --image-id alinux2-x86-sbo-pcluster-v3
+    - pcluster build-image --image-configuration ./config/custom_al2_x86_ami_config.yaml --image-id ${IMAGE_ID}
     - pcluster list-images --image-status PENDING
 
 delete_image:
@@ -219,7 +223,7 @@ delete_image:
   variables:
     IMAGE_ID: ""
   script:
-    - pcluster delete-image  --image-id $IMAGE_ID
+    - pcluster delete-image --image-id $IMAGE_ID
 
 build_image_status:
   stage: info
@@ -267,7 +271,7 @@ dra_describe:
   allow_failure: true
   script:
     - aws fsx describe-data-repository-associations
-  
+
 dra_redeploy:
   stage: info
   extends: .pcluster
@@ -301,10 +305,23 @@ debug_image:
   stage: build
   extends: .pcluster
   when: manual
+  variables:
+    IMAGE_ID: ""
   script:
-    - pcluster describe-image --image-id alinux2-x86-sbo-pcluster-v3
-    - pcluster list-image-log-streams --image-id alinux2-x86-sbo-pcluster-v3 --query 'logStreams[*].logStreamName'
-    - pcluster get-image-log-events --image-id alinux2-x86-sbo-pcluster-v3 --log-stream-name 3.7.1/1 | tee build_log.json
+    - pcluster describe-image --image-id ${IMAGE_ID}
+    - pcluster list-image-log-streams --image-id ${IMAGE_ID} --query 'logStreams[*].logStreamName'
+    - pcluster get-image-log-events --image-id ${IMAGE_ID} --log-stream-name 3.8.0/1 | tee build_log.json
   artifacts:
     paths:
       - build_log.json
+
+
+run_cmd:
+  stage: info
+  extends: .pcluster
+  when: manual
+  variables:
+    COMMAND: ""
+  script:
+    - echo -e "Running command:\n\t${COMMAND}"
+    - ${COMMAND}

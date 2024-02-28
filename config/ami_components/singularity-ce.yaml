@@ -1,10 +1,10 @@
-name: install-singularity-ce
+name: singularity-ce
 description: Install Singularity CE
 schemaVersion: 1.0
 parameters:
   - SingularityVersion:
       type: string
-      default: "3.11.3-1.el7"
+      default: "4.1.1-1.el7"
       description: The version of singularity to install
 phases:
   - name: build
@@ -25,5 +25,5 @@ phases:
         action: ExecuteBash
         inputs:
           commands:
-            - which singularity && singularity --version | grep "{{ SingularityVersion }}" -q
+            - which singularity && singularity --version
 

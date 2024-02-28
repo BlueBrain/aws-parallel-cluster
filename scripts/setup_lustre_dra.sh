@@ -15,6 +15,7 @@ aws fsx create-data-repository-association --file-system-id ${FSX_ID} \
                                            --data-repository-path s3://sbonexusdata \
                                            --batch-import-meta-data-on-create \
                                            --s3 AutoImportPolicy=\{"Events"=["NEW","CHANGED","DELETED"]\},AutoExportPolicy=\{"Events"=["NEW","CHANGED","DELETED"]\}
+                                           --tags '[\{"Key": "data_source", "Value": "dra"\},\{"Key": "vlab", "Value": "bbp"\}]'
 
 # Setup the DRA for the containers
 aws fsx create-data-repository-association --file-system-id ${FSX_ID} \

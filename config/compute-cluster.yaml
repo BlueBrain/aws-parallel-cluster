@@ -1,7 +1,14 @@
 Region: us-east-1
 Image:
   Os: alinux2
-  CustomAmi: ami-081360f17c6e0bb4d
+  CustomAmi: ami-0b07126cbb181714f
+Tags:
+  - Key: sbo_billing
+    Value: pcluster
+  - Key: vlab
+    Value: bbp
+  - Key: project
+    Value: proj1234
 HeadNode:
   InstanceType: t3.medium
   Networking:
@@ -17,7 +24,6 @@ HeadNode:
   CustomActions:
     OnNodeConfigured:
       Sequence:
-        - Script: s3://sboinfrastructureassets/scripts/install_packages.sh
         - Script: s3://sboinfrastructureassets/scripts/create_users.py
           Args:
             - /sbo/home/resources/users.json
@@ -61,7 +67,6 @@ Scheduling:
     CustomActions:
       OnNodeConfigured:
         Sequence:
-          - Script: s3://sboinfrastructureassets/scripts/install_packages.sh
           - Script: s3://sboinfrastructureassets/scripts/create_users.py
             Args:
               - /sbo/home/resources/users.json
@@ -103,7 +108,6 @@ Scheduling:
     CustomActions:
       OnNodeConfigured:
         Sequence:
-          - Script: s3://sboinfrastructureassets/scripts/install_packages.sh
           - Script: s3://sboinfrastructureassets/scripts/create_users.py
             Args:
               - /sbo/home/resources/users.json
@@ -143,7 +147,6 @@ Scheduling:
     CustomActions:
       OnNodeConfigured:
         Sequence:
-          - Script: s3://sboinfrastructureassets/scripts/install_packages.sh
           - Script: s3://sboinfrastructureassets/scripts/create_users.py
             Args:
               - /sbo/home/resources/users.json

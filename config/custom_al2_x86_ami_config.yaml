@@ -9,4 +9,8 @@ Build:
       - Policy: arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
   Components:
     - Type: arn
-      Value: arn:aws:imagebuilder:us-east-1:671250183987:component/install-singularity-ce/1.0.2/1
+      Value: arn:aws:imagebuilder:us-east-1:671250183987:component/singularity-ce/1.0.1/1
+    - Type: arn
+      Value: arn:aws:imagebuilder:us-east-1:671250183987:component/awscli/1.0.0/1
+    - Type: arn
+      Value: arn:aws:imagebuilder:us-east-1:671250183987:component/rpm-installer/1.0.0/1
