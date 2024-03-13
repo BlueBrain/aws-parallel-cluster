@@ -18,7 +18,7 @@ stages:
     - echo -e "[default]\nregion = us-east-1\noutput = json\n" > ~/.aws/config
 
 .pcluster:
-  image: public.ecr.aws/parallelcluster/pcluster-api:3.8.0
+  image: public.ecr.aws/parallelcluster/pcluster-api:3.9.0
   before_script:
     - |
       # Install the aws cli
@@ -108,9 +108,7 @@ post_deploy:
   script:
     - |
       if [ "$PCLUSTER_ACTION" = "create" ]; then
-          bash scripts/setup_lustre_dra.sh
           bash scripts/wait_for_deployment.sh  # Note: Script waits until cluster is deployed
-          bash scripts/setup_lustre_logs.sh
           bash scripts/update_dns_record.sh
       else # PCLUSTER_ACTION = update
           cluster_status=$(pcluster describe-cluster --cluster-name hpc-cluster --query clusterStatus)
@@ -264,30 +262,6 @@ stop_compute_fleet:
   rules:
     - if: $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME == "staging" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
 
-dra_describe:
-  stage: info
-  extends: .pcluster
-  when: manual
-  allow_failure: true
-  script:
-    - aws fsx describe-data-repository-associations
-
-dra_redeploy:
-  stage: info
-  extends: .pcluster
-  when: manual
-  allow_failure: true
-  script:
-    - DRA_IDS=($(aws fsx describe-data-repository-associations --query Associations[*].AssociationId --output text))
-    - for dra_id in ${DRA_IDS[@]}; do
-    -   echo "Deleting DRA '${dra_id}' from Lustre FSx..."
-    -   aws fsx delete-data-repository-association --association-id ${dra_id} --delete-data-in-file-system
-    - done
-    - while [[ -n $(aws fsx describe-data-repository-associations --query Associations[*].AssociationId --output text) ]]; do 
-    -   echo "DRAs not deleted yet, waiting..."
-    -   sleep 5s
-    - done
-    - bash ./scripts/setup_lustre_dra.sh
 
 delete_cloudformation_stack:
   stage: info
@@ -310,7 +284,7 @@ debug_image:
   script:
     - pcluster describe-image --image-id ${IMAGE_ID}
     - pcluster list-image-log-streams --image-id ${IMAGE_ID} --query 'logStreams[*].logStreamName'
-    - pcluster get-image-log-events --image-id ${IMAGE_ID} --log-stream-name 3.8.0/1 | tee build_log.json
+    - pcluster get-image-log-events --image-id ${IMAGE_ID} --log-stream-name 3.9.0/1 | tee build_log.json
   artifacts:
     paths:
       - build_log.json

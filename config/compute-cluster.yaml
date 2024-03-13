@@ -1,14 +1,10 @@
 Region: us-east-1
 Image:
   Os: alinux2
-  CustomAmi: ami-0b07126cbb181714f
+  CustomAmi: ami-08e31a824b0e1ec59  # alinux2-x86-sbo-pcluster-v5
 Tags:
-  - Key: sbo_billing
-    Value: pcluster
-  - Key: vlab
-    Value: bbp
-  - Key: project
-    Value: proj1234
+  - Key: SBO_Billing
+    Value: parallelcluster
 HeadNode:
   InstanceType: t3.medium
   Networking:
@@ -159,7 +155,7 @@ SharedStorage:
     MountDir: /sbo/home
     EfsSettings:
       FileSystemId: fs-0c2a2f3ad1b1beeca
-  - Name: FsxLustre-Scratch
+  - Name: FsxLustre-Persistent
     StorageType: FsxLustre
     MountDir: /sbo/data
     FsxLustreSettings:
@@ -167,3 +163,16 @@ SharedStorage:
       StorageCapacity: 1200  # Setup Lustre FSx for 1.2TiB (minimum allowed)
       PerUnitStorageThroughput: 250  # Request a bandwidth of 250Mbps/TiB (similar to SCRATCH_2)
       DataCompressionType: LZ4  # Data compression for higher-throughput between OSSs <-> OSTs
+      DataRepositoryAssociations:
+        - Name: Nexus-DRA
+          BatchImportMetaDataOnCreate: true
+          DataRepositoryPath: s3://sbonexusdata
+          FileSystemPath: /project
+          AutoExportPolicy: [ NEW, CHANGED, DELETED ]
+          AutoImportPolicy: [ NEW, CHANGED, DELETED ]
+        - Name: Containers-DRA
+          BatchImportMetaDataOnCreate: true
+          DataRepositoryPath: s3://sboinfrastructureassets/containers
+          FileSystemPath: /containers
+          AutoExportPolicy: [ NEW, CHANGED, DELETED ]
+          AutoImportPolicy: [ NEW, CHANGED, DELETED ]
