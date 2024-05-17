@@ -16,15 +16,8 @@
       sudo --user=slurm mkdir -p ${SLURM_LOG_DIR}
     fi
 
-    # Store >initial< info, SLURM commands (e.g., 'salloc'/'sbatch' + 'srun' lines), and CloudWatch URLs
-    scontrol_cmd ${SLURM_JOB_ID_EXT} > $(logfile info)  # Extended job ID prevents wrong outputs in job arrays
+    # Store >initial< CloudWatch URLs for monitoring
     cloudwatch_urls "10s" > $(logfile cloudwatch)
-
-    # Create links to the script and environment in job arrays
-    if [[ -n $(scontrol_get ArrayJobId) && $(scontrol_get ArrayTaskId) -ne ${SLURM_ARRAY_TASK_MIN} ]]; then
-      ln -s $(SLURM_LOG_PREFIX=${SLURM_LOG_PREFIX_MIN} logfile script sh) $(logfile script sh)
-      ln -s $(SLURM_LOG_PREFIX=${SLURM_LOG_PREFIX_MIN} logfile env sh) $(logfile env sh)
-    fi
   fi
 
 # HELP-9706

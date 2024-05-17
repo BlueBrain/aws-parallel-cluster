@@ -19,6 +19,9 @@
 # Configure behaviour if any task exits with non-zero
   echo "export SLURM_KILL_BAD_EXIT=1"
 
+# Set inactivity timeout to 5 minutes
+  echo "export TMOUT=300"
+
 # HELP-9706
   # Export the ENV variable of the temporary directory
   echo "export TMPDIR=${TMPDIR}"
@@ -39,12 +42,18 @@
     echo "export CALI_MPIREPORT_FILENAME=$(logfile_shm perf json)"
   fi
 
+# Bind Lustre FSx alongside several commands within Singularity containers
+  echo "export SINGULARITY_BIND=${LUSTRE_MNT},$(which lfs),$(which lfs_migrate),$(which ldconfig)"
+  echo "export SINGULARITY_CONTAINLIBS=$(ldconfig -p |& \
+                                         grep -E "/libnl|/libefa|/libib|/librdma|/libacm|/liblustreapi|/liblnetconfig|/libyaml" | \
+                                         awk '{print $NF}' | tr '\n' ',' | sed -r "s|,$||")"
+
 # BBPP154-53 + HPCTM-1782
   # If Intel MPI is loaded and not included in the Singularity list, add its libraries
   if [[ -n ${I_MPI_ROOT} && ${SINGULARITY_CONTAINLIBS} != *${I_MPI_ROOT}* ]]; then
     I_MPI_LIBRARIES=$(find ${I_MPI_ROOT}/lib/release/* | tr '\n' ',')
+    echo "export SINGULARITY_BIND=$(echo -n ${I_MPI_ROOT}/libfabric/lib,${I_MPI_ROOT}/etc,${SINGULARITY_BIND} | sed -r "s|(.*),$|\1|")"
     echo "export SINGULARITY_CONTAINLIBS=$(echo -n ${I_MPI_LIBRARIES}${SINGULARITY_CONTAINLIBS} | sed -r "s|(.*),$|\1|")"
-    echo "export SINGULARITY_BINDPATH=$(echo -n ${I_MPI_ROOT}/libfabric/lib,${I_MPI_ROOT}/etc,${SINGULARITY_BINDPATH} | sed -r "s|(.*),$|\1|")"
     echo "export SINGULARITYENV_LD_PRELOAD=/.singularity.d/libs/libmpi.so"
     # Check whether "EFA" is supported in this compute instance and force enable it if it is
     if [[ -n $(fi_info -p efa -t FI_EP_RDM 2>&1 | grep -e "provider: efa") ]]; then

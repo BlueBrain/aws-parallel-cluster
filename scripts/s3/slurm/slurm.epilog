@@ -15,22 +15,33 @@
   # Only run on the 'main' node or 'batch' node
   if [[ ${SLURMD_NODENAME} == $(scontrol_get BatchHost) ]]; then
     # INFRA-2142
-      # Store >final< info, SLURM commands (e.g., 'salloc'/'sbatch' + 'srun' lines), and CloudWatch URLs
+      # Store >final< info and CloudWatch URLs
       scontrol_cmd ${SLURM_JOB_ID_EXT} > $(logfile info)  # Extended job ID prevents wrong outputs in job arrays
       cloudwatch_urls "false" $(scontrol_get EndTime) > $(logfile cloudwatch)
 
       # Copy 'stdout' and link 'stderr' file if identical
-      cptrim "$(scontrol_get StdOut)" $(logfile stdout)
+      cptrim "$(scontrol_get StdOut)" $(logfile stdout txt ${SHMDIR})
       if [[ -z $(diff "$(scontrol_get StdOut)" "$(scontrol_get StdErr)" 2>&1) ]]; then
         ln -s $(logfile stdout) $(logfile stderr)
       else
-        cptrim "$(scontrol_get StdErr)" $(logfile stderr)
+        cptrim "$(scontrol_get StdErr)" $(logfile stderr txt ${SHMDIR})
       fi
 
-    # HELP-15810
-      # Copy the job environment alongside Neurodamus-Py and Caliper outputs created, if any
-      rm -f $(SLURM_STEP_ID=* logfile_shm pydamus mtime)
-      cp -f $(set -f && logfile * * ${SHMDIR} && set +f) ${SLURM_LOG_DIR} 2>/dev/null
+    # Add a header for CloudWatch and copy the job outputs (e.g., SLURM script, Neurodamus logs, etc.)
+    rm -f $(SLURM_STEP_ID=* logfile_shm pydamus mtime)
+    for file in $(set -f && logfile * * ${SHMDIR} && set +f); do
+        header="$(head -n 1 $(logfile info))"
+        step_id=$(echo -n ${file} | sed -r "s|^.*-([0-9]+)\.[a-z]{2,4}$|\1|" | grep -v ${file})
+        
+        # Append the step ID, if required (e.g., when running more than one simulation in Neurodamus)
+        if [[ -n ${step_id} ]]; then
+          header="$(echo -n ${header} | sed -r "s|^(.*) (JobName=.*)$|\1 StepId=${step_id} \2|")"
+          sleep 1  # Note: Prevents CloudWatch Agent to interpret steps as single log, despite pattern
+        fi
+
+        sed -i -e "1 s|^|${header}\n\n|" ${file}
+        mv ${file} ${SLURM_LOG_DIR}
+    done
 
     # Assign 'slurm' as owner of all copied files and symbolic links in the log directory
     chown --no-dereference slurm:slurm $(set -f && logfile * * && set +f)
