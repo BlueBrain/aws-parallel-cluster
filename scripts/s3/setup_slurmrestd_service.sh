@@ -42,11 +42,6 @@ chmod 400 /var/spool/slurm/statesave/jwks.json
 chown -R slurm:slurm /var/spool/slurm/statesave
 chmod 0755 /var/spool/slurm/statesave
 
-
-
-chmod 644 $UNITFILE
-chmod 400 $AUTHALTCONF
-chown slurm:slurm $AUTHALTCONF
 echo "include $AUTHALTCONF" >> /opt/slurm/etc/slurm.conf
 echo "include $AUTHALTCONF" >> /opt/slurm/etc/slurmdbd.conf
 
@@ -54,4 +49,3 @@ systemctl daemon-reload
 systemctl restart slurmdbd.service slurmctld.service
 systemctl enable slurmrestd.service
 systemctl start slurmrestd.service
-
