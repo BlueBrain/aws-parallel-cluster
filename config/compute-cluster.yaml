@@ -157,15 +157,15 @@ SharedStorage:
       PerUnitStorageThroughput: 250  # Request a bandwidth of 250Mbps/TiB (similar to SCRATCH_2)
       DataCompressionType: LZ4  # Data compression for higher-throughput between OSSs <-> OSTs
       DataRepositoryAssociations:
-        - Name: Nexus-DRA
-          BatchImportMetaDataOnCreate: true
-          DataRepositoryPath: s3://sbonexusdata
-          FileSystemPath: /project
-          AutoExportPolicy: [ NEW, CHANGED, DELETED ]
-          AutoImportPolicy: [ NEW, CHANGED, DELETED ]
         - Name: Containers-DRA
           BatchImportMetaDataOnCreate: true
           DataRepositoryPath: s3://sboinfrastructureassets/containers
           FileSystemPath: /containers
+          AutoExportPolicy: [ NEW, CHANGED, DELETED ]
+          AutoImportPolicy: [ NEW, CHANGED, DELETED ]
+        - Name: Nexus-DRA
+          BatchImportMetaDataOnCreate: true
+          DataRepositoryPath: s3://sbonexusdata
+          FileSystemPath: /project
           AutoExportPolicy: [ NEW, CHANGED, DELETED ]
           AutoImportPolicy: [ NEW, CHANGED, DELETED ]
