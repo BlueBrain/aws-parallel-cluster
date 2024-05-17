@@ -36,7 +36,7 @@ stages:
     - set -x
     - pcluster list-clusters
     - |
-      if $(pcluster list-clusters | grep -q hpc-cluster); then
+      if [ $(pcluster list-clusters --query 'clusters[?Name=="hpc-cluster"].clusterStatus' | grep "CREATE_COMPLETE") ]; then
           echo "Cluster exists, will attempt to update."
           if [ "$DRYRUN" = "true" ]; then
               echo "Dry-running - attempting with a fake cluster first"
@@ -61,7 +61,7 @@ stages:
           echo "Creating new cluster"
           echo "PCLUSTER_ACTION=create" > build.env
           set +e
-          pcluster create-cluster --cluster-configuration ./config/compute-cluster.yaml --cluster-name hpc-cluster --dryrun $DRYRUN 2>&1 > pcluster-output.log
+          pcluster create-cluster --cluster-configuration ./config/compute-cluster.yaml --cluster-name hpc-cluster --dryrun $DRYRUN --rollback-on-failure $ROLLBACK_ON_FAILURE 2>&1 > pcluster-output.log
           pcluster_status=$?
           set -e
       fi
@@ -85,6 +85,7 @@ validate:
   stage: start
   variables:
     DRYRUN: "true"
+    ROLLBACK_ON_FAILURE: "true"
   extends: .update_or_create_cluster
 
 
@@ -92,6 +93,7 @@ deploy:
   stage: deploy
   variables:
     DRYRUN: "false"
+    ROLLBACK_ON_FAILURE: "false"
   extends: .update_or_create_cluster
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
