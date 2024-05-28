@@ -2,13 +2,18 @@
 
 set -x
 
-UNITFILE=/etc/systemd/system/nexus-storage.service
+BASE_PATH=/etc/systemd/system/nexus-storage
+NEXUS_SIF=/sbo/data/containers/nexus-storage.sif
+NEXUS_LATEST_SIF=/sbo/data/containers/nexus-storage-latest.sif
 
-cat <<\EOF >$UNITFILE
+cat <<EOF >${BASE_PATH}.path
+[Path]
+PathExists=${NEXUS_SIF}
+EOF
+
+cat <<EOF >${BASE_PATH}.service
 [Unit]
 Description=Nexus Storage
-Requires=sbo-data.mount
-After=sbo-data.mount
 
 [Service]
 Type=simple
@@ -16,24 +21,18 @@ Restart=always
 User=root
 Group=root
 WorkingDirectory=/root
-
-Environment="NEXUS_SIF=/sbo/data/containers/nexus-storage.sif"
-Environment="NEXUS_LATEST_SIF=/sbo/data/containers/nexus-storage-latest.sif"
 Environment="SINGULARITYENV_STORAGE_CONFIG_FILE=/sbo/data/project/storage.conf"
-ExecStartPre=/usr/bin/bash -c 'while [ ! -f ${NEXUS_SIF} ]; do sleep 10; done; if [ -f ${NEXUS_LATEST_SIF} ]; then mv ${NEXUS_LATEST_SIF} ${NEXUS_SIF}; fi'
+Environment="PATH=/bin:/usr/bin:/sbin:/usr/sbin:/usr/local/bin"
+ExecStartPre=/usr/bin/bash -c 'if [ -f ${NEXUS_LATEST_SIF} ]; then mv ${NEXUS_LATEST_SIF} ${NEXUS_SIF}; fi'
 ExecStart=/usr/bin/singularity run --bind /sbo/data ${NEXUS_SIF} \
   -Dapp.instance.interface="0.0.0.0" \
   -Dakka.http.server.parsing.max-content-length="100g" \
   -Dakka.http.client.parsing.max-content-length="100g" \
   -Dakka.http.server.request-timeout="5 minutes"
-Environment=PATH=/bin:/usr/bin:/sbin:/usr/sbin:/usr/local/bin
-TimeoutSec=7200
 
 [Install]
 WantedBy=multi-user.target
 EOF
 
-chmod 644 /etc/systemd/system/nexus-storage.service
-
-systemctl enable nexus-storage.service
-systemctl start nexus-storage.service
+systemctl enable nexus-storage.service nexus-storage.path
+systemctl start nexus-storage.path
