@@ -27,7 +27,7 @@ ExecStart=/usr/bin/singularity run --bind /sbo/data ${NEXUS_SIF} \
   -Dakka.http.client.parsing.max-content-length="100g" \
   -Dakka.http.server.request-timeout="5 minutes"
 Environment=PATH=/bin:/usr/bin:/sbin:/usr/sbin:/usr/local/bin
-TimeoutSec=1800
+TimeoutSec=7200
 
 [Install]
 WantedBy=multi-user.target
@@ -35,7 +35,5 @@ EOF
 
 chmod 644 /etc/systemd/system/nexus-storage.service
 
-systemctl daemon-reload
 systemctl enable nexus-storage.service
 systemctl start nexus-storage.service
-

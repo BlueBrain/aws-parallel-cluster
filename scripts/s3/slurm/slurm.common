@@ -9,6 +9,11 @@ if [[ -z ${SLURM_SCRIPT_CONTEXT} ]]; then
   exit 1
 fi
 
+# Ensure that the common environment is not already loaded
+if [[ -n ${_SCONTROL_CMD} ]]; then
+  return
+fi
+
 # Define the essential environment for the scripts
   LUSTRE_MNT=/sbo/data                          # Lustre FSx mount point
   SLURM_INTERACTIVE_STEP=$((0xfffffffa))        # https://github.com/SchedMD/slurm/blob/5a995f/slurm/slurm.h#L155

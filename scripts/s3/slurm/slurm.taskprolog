@@ -7,6 +7,20 @@
 # Perform common checks and set essential variables (e.g., TMPDIR)
 . /opt/slurm/etc/scripts/slurm.common --essentials
 
+# Check if 'PATH' is not properly set and configure it (i.e., for SLURM REST API jobs)
+  if [[ ${PATH} != *"/opt/aws/bin"* ]]; then
+    export PATH=$(echo "/opt/intel/mpi/2021.9.0/libfabric/bin:/opt/intel/mpi/2021.9.0/bin:/sbo/home/${SLURM_JOB_USER}/.local/bin:" \
+                       "/opt/amazon/efa/bin/:/usr/lib64/qt-3.3/bin:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/sbin:/bin:" \
+                       "/opt/aws/bin:/opt/parallelcluster/pyenv/versions/3.9.17/envs/cfn_bootstrap_virtualenv/bin:" \
+                       "/opt/parallelcluster/pyenv/versions/3.9.17/envs/awsbatch_virtualenv/bin:/opt/slurm/bin" | sed "s|: |:|g")
+    echo "export PATH=${PATH}"
+  fi
+
+# Configure '--cpus-per-task' to 1 by default, if not set
+  if [[ -z ${SLURM_CPUS_PER_TASK} ]]; then
+    echo "export SLURM_CPUS_PER_TASK=1"
+  fi
+
 # Keep the job environment from the user if not stored yet
   if [[ ! -f $(realpath ${SHMDIR}/*-env.sh) ]]; then
     . /opt/slurm/etc/scripts/slurm.common  # Load the rest of the functionality

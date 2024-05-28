@@ -4,6 +4,7 @@ SLURM_DIR=${1:-"/opt/slurm"}
 AWS_CLOUDWATCH_RETENTION=${2:-14}
 
 SLURM_SCRIPTS_DIR="${SLURM_DIR}/etc/scripts"
+SLURM_LOG_DIR="/var/log/slurm"
 SLURM_CLOUDWATCH_CONFIG=/tmp/slurm_cloudwatch.json
 AWS_CLOUDWATCH_PATH=/opt/aws/amazon-cloudwatch-agent
 AWS_CLOUDWATCH_AGENTCTL=${AWS_CLOUDWATCH_PATH}/bin/amazon-cloudwatch-agent-ctl
@@ -17,7 +18,14 @@ chmod a+x ${SLURM_SCRIPTS_DIR}/slurm.*
 ln -s ../slurm.prolog ${SLURM_SCRIPTS_DIR}/prolog.d/80_slurm.prolog
 ln -s ../slurm.epilog ${SLURM_SCRIPTS_DIR}/epilog.d/80_slurm.epilog
 
-# Retrieve the default log group name from the ParallelCluster and append a suffix
+# Update log file location to prevent 'error: chdir(/var/log): Permission denied'
+install -d -m 0755 -o slurm -g slurm ${SLURM_LOG_DIR}
+for config_file in slurm.conf slurmdbd.conf; do
+  sed -i "s|/var/log|${SLURM_LOG_DIR}|g" /opt/slurm/etc/${config_file}
+done
+sed -i "s|/var/log/slurm|${SLURM_LOG_DIR}/slurm|g" ${AWS_CLOUDWATCH_CONFIG}
+
+# Retrieve the CloudWatch log group name from the ParallelCluster and append a suffix
 log_group="$(grep "log_group_name" ${AWS_CLOUDWATCH_CONFIG} | head -n 1 | sed -r "s|^.*: \"(.*)\"$|\1|").slurm-jobs"
 
 # Helper function to define a CloudWatch entry
