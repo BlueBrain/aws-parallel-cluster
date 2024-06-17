@@ -4,7 +4,7 @@ Image:
   CustomAmi: ami-0b1691e09041b281a  # alinux2-x86-sbo-pcluster-v6
 Tags:
   - Key: SBO_Billing
-    Value: parallelcluster
+    Value: hpc:parallelcluster
 Monitoring:
   Logs:
     CloudWatch:
