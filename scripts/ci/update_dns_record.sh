@@ -5,7 +5,7 @@ zone_id=$(aws route53 list-hosted-zones-by-name | jq -r '.HostedZones[] | select
 echo "Zone id: ${zone_id}"
 
 # Get the ip address of the head node
-ip_address=$(pcluster describe-cluster -n hpc-cluster | jq -r .headNode.privateIpAddress)
+ip_address=$(pcluster describe-cluster --cluster-name ${1} | jq -r .headNode.privateIpAddress)
 echo "Ip address: ${ip_address}"
 
 # name of the dns record

@@ -1,303 +1,299 @@
-workflow:
-  rules:
-    - if: $CI_COMMIT_BRANCH == "main"
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-    - if: $CI_PIPELINE_SOURCE == "web"
+
+######################
+# Base Configuration #
+######################
 
 stages:
  - info
- - build
- - start
+ - ami
  - deploy
 
 .aws-cli:
-  image: public.ecr.aws/aws-cli/aws-cli:2.13.26
+  image: public.ecr.aws/aws-cli/aws-cli:2.16.2
+  variables:
+    BEFORE_SCRIPT: "set -x; export AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_DEFAULT_REGION AWS_DEFAULT_OUTPUT"
   before_script:
-    - mkdir -p ~/.aws/
-    - echo -e "[default]\naws_access_key_id = ${AWS_ACCESS_KEY}\naws_secret_access_key = ${AWS_SECRET_ACCESS_KEY}\n" > ~/.aws/credentials
-    - echo -e "[default]\nregion = us-east-1\noutput = json\n" > ~/.aws/config
+    - eval ${BEFORE_SCRIPT}
 
 .pcluster:
-  image: public.ecr.aws/parallelcluster/pcluster-api:3.9.0
+  image: public.ecr.aws/parallelcluster/pcluster-api:3.9.2
+  variables:
+    DEFAULT_CLUSTER_NAME: "sbo-parallelcluster-$(date +%s)"
+    DEFAULT_CLUSTER_TAGS: "Key=SBO_Billing,Value=hpc:parallelcluster"
+    DYNAMODB_TABLE: "sbo-parallelcluster-deployments"
+    BEFORE_SCRIPT: "set -x; export AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_DEFAULT_REGION AWS_DEFAULT_OUTPUT;
+                    yum install -y unzip jq;
+                    curl -O https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip && unzip -q aws*.zip && ./aws/install"
   before_script:
+    - eval ${BEFORE_SCRIPT}
     - |
-      # Install the aws cli
-      yum install -y unzip jq
-      curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-      unzip -q awscliv2.zip
-      ./aws/install
-    - mkdir -p ~/.aws/
-    - echo -e "[default]\naws_access_key_id = ${AWS_ACCESS_KEY}\naws_secret_access_key = ${AWS_SECRET_ACCESS_KEY}\n" > ~/.aws/credentials
-    - echo -e "[default]\nregion = us-east-1\noutput = json\n" > ~/.aws/config
-
-.update_or_create_cluster:
-  extends: .pcluster
-  script:
-    - set -x
-    - pcluster list-clusters
-    - |
-      if [ $(pcluster list-clusters --query 'clusters[?Name=="hpc-cluster"].clusterStatus' | grep "CREATE_COMPLETE") ]; then
-          echo "Cluster exists, will attempt to update."
-          if [ "$DRYRUN" = "true" ]; then
-              echo "Dry-running - attempting with a fake cluster first"
-              set +e
-              pcluster create-cluster --cluster-configuration ./config/compute-cluster.yaml --cluster-name fufu-cluster --dryrun $DRYRUN 2>&1 > fufu-pcluster-output.log
-              cat fufu-pcluster-output.log | grep -q "Request would have succeeded, but DryRun flag is set\|No changes found"
-              exitcode=$?
-              if [ "${exitcode}" != 0 ]; then
-                  echo "Fake cluster failed"
-                  cat fufu-pcluster-output.log
-                  exit ${exitcode}
-              fi
-              set -e
-              echo "Fake cluster succeeded, now let's try with the real cluster"
-          fi
-          echo "PCLUSTER_ACTION=update" > build.env
-          set +e
-          pcluster update-cluster --cluster-configuration ./config/compute-cluster.yaml --cluster-name hpc-cluster --dryrun $DRYRUN 2>&1 > pcluster-output.log
-          pcluster_status=$?
-          set -e
-      else
-          echo "Creating new cluster"
-          echo "PCLUSTER_ACTION=create" > build.env
-          set +e
-          pcluster create-cluster --cluster-configuration ./config/compute-cluster.yaml --cluster-name hpc-cluster --dryrun $DRYRUN --rollback-on-failure $ROLLBACK_ON_FAILURE 2>&1 > pcluster-output.log
-          pcluster_status=$?
-          set -e
-      fi
-    - |
-      cat pcluster-output.log
-      echo "====="
-      if [ "$DRYRUN" = "false" ]; then
-          test $pcluster_status -eq 0
-          pcluster describe-cluster --cluster-name hpc-cluster
-      else
-          if [ -z $CI_MERGE_REQUEST_IID ]; then
-            cat pcluster-output.log | grep -q "Request would have succeeded, but DryRun flag is set\|No changes found"
-          else
-            pip install requests furl
-            python check_validation_output.py
-          fi
-      fi
-
-# the update/create commands always return with an error code when you use --dryrun true, even when the validation succeeded and there are no errors => parsing the output afterwards
-validate:
-  stage: start
-  variables:
-    DRYRUN: "true"
-    ROLLBACK_ON_FAILURE: "true"
-  extends: .update_or_create_cluster
+      function monitor_cfstack {
+        while [[ $(aws cloudformation describe-stacks --stack-name ${IMAGE_ID} --query 'Stacks[*].StackStatus' --output text) == *"${1}"* ]]; do
+          echo "Waiting for CloudFormation stack '${IMAGE_ID}' (status: ${1})..."
+          sleep ${2}
+        done
+      }
+      function cluster_name_get {
+        aws dynamodb get-item --table-name ${DYNAMODB_TABLE} \
+                              --key "{\"type\":{\"S\":\"${1}\"}}" \
+                              --output text | grep NAME | cut -f2
+      }
+      function cluster_name_update {
+        aws dynamodb put-item --table-name ${DYNAMODB_TABLE} \
+                              --item "{\"type\":{\"S\":\"${1}\"}, \
+                                       \"name\":{\"S\":\"${2}\"}}"
+      }
+      function cluster_name_clear {
+        cluster_name_update ${1} ""
+      }
 
 
-deploy:
-  stage: deploy
-  variables:
-    DRYRUN: "false"
-    ROLLBACK_ON_FAILURE: "false"
-  extends: .update_or_create_cluster
-  rules:
-    - if: $CI_COMMIT_BRANCH == "main"
-  artifacts:
-    reports:
-      dotenv: build.env
+################
+# 'info' Stage #
+################
 
-
-post_deploy:
-  stage: deploy
-  extends: .pcluster
-  needs:
-    - deploy
-  script:
-    - |
-      if [ "$PCLUSTER_ACTION" = "create" ]; then
-          bash scripts/wait_for_deployment.sh  # Note: Script waits until cluster is deployed
-          bash scripts/update_dns_record.sh
-      else # PCLUSTER_ACTION = update
-          cluster_status=$(pcluster describe-cluster --cluster-name hpc-cluster --query clusterStatus)
-          while [[ "$cluster_status" != *"UPDATE_COMPLETE"* ]]; do
-              sleep 10
-              echo "Waiting for cluster to finish updating  (current status: $cluster_status)..."
-              cluster_status=$(pcluster describe-cluster --cluster-name hpc-cluster --query clusterStatus)
-          done
-          echo "Done. restarting compute fleet"
-          pcluster update-compute-fleet --cluster-name hpc-cluster --status START_REQUESTED
-      fi
-  rules:
-    - if: $CI_COMMIT_BRANCH == "main"
-
-
-push_scripts:
-  stage: deploy
-  extends: .aws-cli
-  script:
-    - aws s3 sync ./config/s3 s3://sboinfrastructureassets/config/
-    - aws s3 sync ./scripts/s3 s3://sboinfrastructureassets/scripts/
-  rules:
-    - if: $CI_COMMIT_BRANCH == "main"
-
-destroy:
-  stage: start
-  extends: .pcluster
-  when: manual
-  allow_failure: true
-  script:
-    - |
-      set +e
-      pcluster delete-cluster --cluster-name hpc-cluster
-      cluster_status=$(pcluster describe-cluster --cluster-name hpc-cluster --query clusterStatus)
-      while [[ "${cluster_status}" == *"DELETE_IN_PROGRESS"* ]]; do
-          echo "Waiting for the cluster to be deleted..."
-          sleep 10
-          cluster_status=$(pcluster describe-cluster --cluster-name hpc-cluster --query clusterStatus)
-      done
-      set -e
-      echo ${cluster_status}
-  rules:
-    - if: $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME == "staging" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
-
-print_info:
+deployment_information:
   stage: info
   extends: .pcluster
-  when: manual
   allow_failure: true
+  when: manual
+  rules:
+    - if: $CI
   script:
     - pcluster version
     - pcluster list-official-images
     - aws imagebuilder list-components --owner Self
     - pcluster list-images --image-status AVAILABLE
-    - pcluster list-images --image-status PENDING
-    - pcluster list-images --image-status FAILED
-    - pcluster list-clusters
     - |
-      if $(pcluster list-clusters | grep -q hpc-cluster) ; then
-          pcluster describe-cluster --cluster-name hpc-cluster
-          pcluster describe-compute-fleet --cluster-name hpc-cluster
-      fi
-
-print_instance_availabilities:
-  stage: info
-  extends: .aws-cli
-  when: manual
-  allow_failure: true
-  script:
-    - aws ec2 describe-reserved-instances-offerings --filters "Name=scope,Values=Availability Zone" --no-include-marketplace --instance-type t3.micro --region us-east-1
-    - aws ec2 describe-reserved-instances-offerings --filters "Name=scope,Values=Availability Zone" --no-include-marketplace --instance-type c6i.metal --region us-east-1
-    - aws ec2 describe-reserved-instances-offerings --filters "Name=scope,Values=Availability Zone" --no-include-marketplace --instance-type c6id.metal --region us-east-1
-
+      for cluster_name in $(aws dynamodb scan --table-name ${DYNAMODB_TABLE} --output text | grep NAME | cut -f2); do
+          pcluster describe-cluster --cluster-name ${cluster_name}
+          pcluster describe-compute-fleet --cluster-name ${cluster_name}
+      done
+  
 export_cluster_logs:
   stage: info
   extends: .pcluster
   when: manual
-  allow_failure: true
+  rules:
+    - if: $CI
+  variables:
+    CLUSTER_NAME: ""
   script:
-    - pcluster export-cluster-logs --cluster-name hpc-cluster --bucket sboinfrastructureassets --bucket-prefix logs --output-file "log_archive_$(date +%Y%m%d_%H%M%S).tar.gz"
+    - |
+      if [[ -z $(pcluster list-clusters | grep ${CLUSTER_NAME} 2>/dev/null) ]]; then
+        echo "[ERROR] 'CLUSTER_NAME' parameter is required and it must match an existing cluster." >&2
+        exit -1
+      fi
+    - pcluster export-cluster-logs --cluster-name ${CLUSTER_NAME} --bucket sboinfrastructureassets --bucket-prefix logs --output-file "${CLUSTER_NAME}_logs_$(date +%S).tar.gz"
   artifacts:
     paths:
-      - log_archive_*.tar.gz
+      - ${CLUSTER_NAME}_logs_*.tar.gz
 
-update_components:
-  stage: build
+
+###############
+# 'ami' Stage #
+###############
+
+.component_build:
+  stage: ami
   extends: .aws-cli
-  when: manual
-  script:
-    #- echo "no-op" # update manually if components change - yes it's ugly
-    - aws s3 sync ./config/ami_components s3://sboinfrastructureassets/components
-    - aws imagebuilder create-component --name singularity-ce --semantic-version "1.0.1" --change-description "Simplify test to avoid issues" --platform "Linux" --uri "s3://sboinfrastructureassets/components/singularity-ce.yaml"
-      #- aws imagebuilder create-component --name awscli --semantic-version "1.0.0" --change-description "Initial commit AWS CLI component" --platform "Linux" --uri "s3://sboinfrastructureassets/components/awscli.yaml"
-      #- aws imagebuilder create-component --name rpm-installer --semantic-version "1.0.0" --change-description "Initial commit RPM installer component" --platform "Linux" --uri "s3://sboinfrastructureassets/components/rpm_installer.yaml"
-
-build_image:
-  stage: build
-  extends: .pcluster
-  when: manual
+  rules:
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "staging"
   variables:
-    IMAGE_ID: ""
-  script:
-    - pcluster build-image --image-configuration ./config/custom_al2_x86_ami_config.yaml --image-id ${IMAGE_ID}
-    - pcluster list-images --image-status PENDING
+    NAME: ""
+    VERSION: ""
+  before_script:
+    - |
+      if [[ -z ${NAME} || -z ${VERSION} ]]; then
+        echo "[ERROR] Both 'NAME' and 'VERSION' parameters are required." >&2
+        exit -1
+      fi
+    - eval ${BEFORE_SCRIPT}
 
-delete_image:
-  stage: build
-  extends: .pcluster
+component_create:
+  extends: .component_build
   when: manual
+  script:
+    - aws s3 cp ./config/ami/components/${NAME}.yaml s3://sboinfrastructureassets/components/${NAME}.yaml
+    - aws imagebuilder create-component --name "${NAME}" --semantic-version "${VERSION}" --platform "Linux" --uri "s3://sboinfrastructureassets/components/${NAME}.yaml"
+
+component_delete:
+  extends: .component_build
+  when: manual
+  script:
+    - aws imagebuilder delete-component --component-build-version-arn arn:aws:imagebuilder:${AWS_DEFAULT_REGION}:${AWS_ACCOUNT_ID}:component/${NAME}/${VERSION}/1
+
+.image_build:
+  stage: ami
+  extends: .pcluster
+  rules:
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "staging"
   variables:
-    IMAGE_ID: ""
-  script:
-    - pcluster delete-image --image-id $IMAGE_ID
+    VERSION: ""
+  before_script:
+    - |
+      if [[ -z ${VERSION} ]]; then
+        echo "[ERROR] 'VERSION' parameter is required." >&2
+        exit -1
+      fi
+    - eval ${BEFORE_SCRIPT}
 
-build_image_status:
-  stage: info
-  extends: .pcluster
+image_create:
+  extends: .image_build
   when: manual
-  script:
-    - pcluster list-images --image-status PENDING
-
-start_compute_fleet:
-  stage: info
-  extends: .pcluster
-  when: manual
+  timeout: 2h
   script:
     - |
-      pcluster update-compute-fleet --cluster-name hpc-cluster --status START_REQUESTED
-      fleet_status=$(pcluster describe-compute-fleet --cluster-name hpc-cluster --query status)
-      while [[ "$fleet_status" != *"RUNNING"* ]]; do
-          sleep 5
-          echo "Waiting for fleet to stop (current status: $fleet_status)..."
-          fleet_status=$(pcluster describe-compute-fleet --cluster-name hpc-cluster --query status)
-      done
-      echo "Done."
+      IMAGE_ID=alinux2-x86-sbo-pcluster-v${VERSION}
+      pcluster build-image --image-configuration ./config/ami/ami-config.yaml --image-id ${IMAGE_ID}
 
-stop_compute_fleet:
-  stage: info
-  extends: .pcluster
+      monitor_cfstack CREATE_IN_PROGRESS 20
+      if [[ $(pcluster describe-image --image-id ${IMAGE_ID} --query 'imageBuildStatus') != *"BUILD_COMPLETE"* ]]; then
+        echo "[ERROR] Image '${IMAGE_ID}' failed. Run 'image_debug' pipeline for more information." >&2
+        exit -1
+      fi
+
+      monitor_cfstack DELETE_IN_PROGRESS 5
+      aws cloudformation delete-stack --stack-name ${IMAGE_ID}  # Forces delete due to 'DELETE_FAILED' bug
+
+      echo "Adding 'SBO_Billing' tag to '${IMAGE_ID}'..."
+      AMI_ID=$(pcluster describe-image --image-id ${IMAGE_ID} --query 'ec2AmiInfo.amiId' | tr -d '"')
+      aws ec2 create-tags --resources ${AMI_ID} --tags ${DEFAULT_CLUSTER_TAGS}
+
+      pcluster describe-image --image-id ${IMAGE_ID}
+      echo "Image '${IMAGE_ID}' created successfully."
+
+image_debug:
+  extends: .image_build
   when: manual
   script:
-    - |
-      pcluster update-compute-fleet --cluster-name hpc-cluster --status STOP_REQUESTED
-      fleet_status=$(pcluster describe-compute-fleet --cluster-name hpc-cluster --query status)
-      while [[ "$fleet_status" != *"STOPPED"* ]]; do
-          sleep 5
-          echo "Waiting for fleet to stop (current status: $fleet_status)..."
-          fleet_status=$(pcluster describe-compute-fleet --cluster-name hpc-cluster --query status)
-      done
-      echo "Done."
-  rules:
-    - if: $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME == "staging" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
-
-
-delete_cloudformation_stack:
-  stage: info
-  extends: .aws-cli
-  when: manual
-  script:
-    - aws cloudformation list-stacks
-    - aws cloudformation delete-stack --stack-name alinux2-sbo-pcluster-v1
-    - aws cloudformation list-stacks
-  rules:
-    - if: $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME == "staging" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
-
-
-debug_image:
-  stage: build
-  extends: .pcluster
-  when: manual
-  variables:
-    IMAGE_ID: ""
-  script:
-    - pcluster describe-image --image-id ${IMAGE_ID}
-    - pcluster list-image-log-streams --image-id ${IMAGE_ID} --query 'logStreams[*].logStreamName'
-    - pcluster get-image-log-events --image-id ${IMAGE_ID} --log-stream-name 3.9.0/1 | tee build_log.json
+    - pcluster describe-image --image-id alinux2-x86-sbo-pcluster-v${VERSION}
+    - pcluster list-image-log-streams --image-id alinux2-x86-sbo-pcluster-v${VERSION} --query 'logStreams[*].logStreamName'
+    - pcluster get-image-log-events --image-id alinux2-x86-sbo-pcluster-v${VERSION} --log-stream-name 3.9.2/1 | tee build_log.json
   artifacts:
     paths:
       - build_log.json
 
-
-run_cmd:
-  stage: info
-  extends: .pcluster
+image_delete:
+  extends: .image_build
   when: manual
-  variables:
-    COMMAND: ""
   script:
-    - echo -e "Running command:\n\t${COMMAND}"
-    - ${COMMAND}
+    - |
+      IMAGE_ID=alinux2-x86-sbo-pcluster-v${VERSION}
+      aws cloudformation delete-stack --stack-name ${IMAGE_ID}
+      pcluster delete-image --image-id ${IMAGE_ID}
+
+      until ! pcluster describe-image --image-id ${IMAGE_ID} 1>/dev/null; do
+        echo "Waiting for '${IMAGE_ID}' to be deleted (status: DELETE_IN_PROGRESS)..."
+        sleep 5
+      done
+
+      echo "Image '${IMAGE_ID}' deleted successfully."
+
+
+##################
+# 'deploy' Stage #
+##################
+
+validate_yaml:
+  stage: deploy
+  extends: .pcluster
+  rules:
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME != "main"
+  script:
+    - |
+      set +e  # DryRun returns 1 instead of 0
+      pcluster create-cluster --cluster-configuration ./config/compute-cluster.yaml \
+                              --cluster-name $(eval echo -n ${DEFAULT_CLUSTER_NAME}) \
+                              --dryrun true 2>&1 | tee pcluster-output.log
+      set -e
+      pip3 install requests furl
+      python3 scripts/ci/check_validation_output.py
+
+.staging_deploy:
+  stage: deploy
+  extends: .pcluster
+  rules:
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
+
+staging_deploy_setup:
+  extends: .staging_deploy
+  script:
+    - |
+      staging_cluster=$(cluster_name_get staging)
+
+      if [[ -n ${staging_cluster} ]]; then
+        set +e; pcluster delete-cluster --cluster-name ${staging_cluster}; set -e
+        
+        while [[ $(pcluster describe-cluster --cluster-name ${staging_cluster} --query clusterStatus) == *"DELETE_IN_PROGRESS"* ]]; do
+          echo "Waiting for previous staging cluster '${staging_cluster}' to be deleted..."
+          sleep 20
+        done
+        
+        cluster_name_clear staging
+        echo "'${staging_cluster}' deleted succesfully."
+      fi
+    - aws s3 sync ./config/s3 s3://sboinfrastructureassets/config/
+    - aws s3 sync ./scripts/s3 s3://sboinfrastructureassets/scripts/
+    - echo "Staging properly setup and ready for deploying a new ParallelCluster."
+
+staging_deploy:
+  extends: .staging_deploy
+  needs:
+    - staging_deploy_setup
+  timeout: 2h
+  script:
+    - |
+      staging_cluster=$(eval echo -n ${DEFAULT_CLUSTER_NAME})
+      
+      set +e
+      pcluster create-cluster --cluster-configuration ./config/compute-cluster.yaml \
+                              --cluster-name ${staging_cluster} \
+                              --rollback-on-failure false
+      set -e
+
+      cluster_name_update staging ${staging_cluster}
+      while [[ $(pcluster describe-cluster --cluster-name ${staging_cluster} --query clusterStatus) == *"CREATE_IN_PROGRESS"* ]]; do
+        echo "Waiting for staging cluster '${staging_cluster}' to be deployed..."
+        sleep 20
+      done
+
+      if [[ $(pcluster describe-cluster --cluster-name ${staging_cluster} --query clusterStatus) != *"CREATE_COMPLETE"* ]]; then
+          echo "[ERROR] Staging ParallelCluster '${staging_cluster}' failed to deploy (see CloudWatch 'cfn-init' logs)"
+          exit -1
+      fi
+      
+      pcluster describe-cluster --cluster-name ${staging_cluster}
+    - echo "Connect via 'pcluster ssh --cluster-name ${staging_cluster} -i ~/.ssh/YOURKEYHERE.pem'"
+    - echo "Staging ParallelCluster '${staging_cluster}' created succesfully."
+
+.main_deploy:
+  stage: deploy
+  extends: .pcluster
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+
+main_deploy:
+  extends: .main_deploy
+  script:
+    - bash scripts/ci/update_dns_record.sh $(cluster_name_get staging)
+    - echo "DNS updated and cluster '${staging_cluster}' is now public."
+
+main_postdeploy:
+  extends: .main_deploy
+  needs:
+    - main_deploy
+  script:
+    - |
+      main_cluster=$(cluster_name_get main)
+      staging_cluster=$(cluster_name_get staging)
+      
+      cluster_name_update main ${staging_cluster}
+      cluster_name_clear staging
+
+      set +e; pcluster delete-cluster --cluster-name ${main_cluster}; set -e
+      while [[ $(pcluster describe-cluster --cluster-name ${main_cluster} --query clusterStatus) == *"DELETE_IN_PROGRESS"* ]]; do
+        echo "Waiting for previous main cluster '${main_cluster}' to be deleted..."
+        sleep 20
+      done
+    - echo "Previous main ParallelCluster '${main_cluster}' deleted succesfully."

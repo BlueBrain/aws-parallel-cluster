@@ -1,0 +1,27 @@
+name: packages
+description: Install RPM Packages
+schemaVersion: 1.0
+phases:
+  - name: build
+    steps:
+     - name: InstallPackages
+       action: ExecuteBash
+       inputs:
+         commands:
+           - |
+            amazon-linux-extras enable epel
+            yum clean metadata
+            yum update -y
+            yum install -y epel-release
+            yum install -y tmux vim htop clustershell
+  - name: test
+    steps:
+      - name: TestPackages
+        action: ExecuteBash
+        inputs:
+          commands:
+            - |
+             which tmux && tmux -V && \
+             which vim && vim --version | head -n1 && \
+             which htop && htop --version | head -n1 && \
+             which nodeset && nodeset --version

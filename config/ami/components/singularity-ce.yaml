@@ -9,16 +9,16 @@ parameters:
 phases:
   - name: build
     steps:
-     - name: InstallPackage
+     - name: InstallSingularity
        action: ExecuteBash
        inputs:
          commands:
            - |
-             # download and install package file
              PACKAGE="singularity-ce-{{ SingularityVersion }}.x86_64.rpm"
              VERSION="v$(echo "{{ SingularityVersion }}" | cut -d "-" -f 1)"
              wget --no-verbose "https://github.com/sylabs/singularity/releases/download/${VERSION}/${PACKAGE}"
              yum install -y ${PACKAGE}
+             rm -f ${PACKAGE}
   - name: test
     steps:
       - name: TestSingularity
@@ -26,4 +26,3 @@ phases:
         inputs:
           commands:
             - which singularity && singularity --version
-

@@ -1,0 +1,13 @@
+Build:
+  InstanceType: m5.large
+  ParentImage: arn:aws:imagebuilder:us-east-1:aws:image/amazon-linux-2-x86/x.x.x
+  SubnetId: subnet-076ece71c00742d3c # compute
+  SecurityGroupIds:
+    - sg-0b5941ba4f4d1a9ff # sbo-poc-compute / hpc
+  Components:
+    - Type: arn
+      Value: arn:aws:imagebuilder:us-east-1:671250183987:component/awscli/1.0.1/1
+    - Type: arn
+      Value: arn:aws:imagebuilder:us-east-1:671250183987:component/packages/1.0.0/1
+    - Type: arn
+      Value: arn:aws:imagebuilder:us-east-1:671250183987:component/singularity-ce/1.0.2/1

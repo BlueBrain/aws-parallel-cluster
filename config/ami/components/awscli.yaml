@@ -20,5 +20,4 @@ phases:
         action: ExecuteBash
         inputs:
           commands:
-            - which aws && aws --version
-
+            - /usr/local/bin/aws --version
