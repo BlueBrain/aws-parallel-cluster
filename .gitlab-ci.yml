@@ -27,12 +27,6 @@ stages:
   before_script:
     - eval ${BEFORE_SCRIPT}
     - |
-      function monitor_cfstack {
-        while [[ $(aws cloudformation describe-stacks --stack-name ${IMAGE_ID} --query 'Stacks[*].StackStatus' --output text) == *"${1}"* ]]; do
-          echo "Waiting for CloudFormation stack '${IMAGE_ID}' (status: ${1})..."
-          sleep ${2}
-        done
-      }
       function cluster_name_get {
         aws dynamodb get-item --table-name ${DYNAMODB_TABLE} \
                               --key "{\"type\":{\"S\":\"${1}\"}}" \
@@ -147,13 +141,20 @@ image_create:
       IMAGE_ID=alinux2-x86-sbo-pcluster-v${VERSION}
       pcluster build-image --image-configuration ./config/ami/ami-config.yaml --image-id ${IMAGE_ID}
 
-      monitor_cfstack CREATE_IN_PROGRESS 20
+      while [[ $(aws cloudformation describe-stacks --stack-name ${IMAGE_ID} --query 'Stacks[*].StackStatus' --output text) == *"CREATE_IN_PROGRESS"* ]]; do
+        echo "Waiting for CloudFormation stack '${IMAGE_ID}' to create the AMI..."
+        sleep 20
+      done
+
       if [[ $(pcluster describe-image --image-id ${IMAGE_ID} --query 'imageBuildStatus') != *"BUILD_COMPLETE"* ]]; then
         echo "[ERROR] Image '${IMAGE_ID}' failed. Run 'image_debug' pipeline for more information." >&2
         exit -1
       fi
 
-      monitor_cfstack DELETE_IN_PROGRESS 5
+      while [[ $(aws cloudformation describe-stacks --stack-name ${IMAGE_ID} --query 'Stacks[*].StackStatus' --output text) == *"DELETE_IN_PROGRESS"* ]]; do
+        echo "Waiting for CloudFormation stack '${IMAGE_ID}' to be deleted..."
+        sleep 5
+      done
       aws cloudformation delete-stack --stack-name ${IMAGE_ID}  # Forces delete due to 'DELETE_FAILED' bug
 
       echo "Adding 'SBO_Billing' tag to '${IMAGE_ID}'..."

@@ -1,7 +1,7 @@
 Region: us-east-1
 Image:
   Os: alinux2
-  CustomAmi: ami-0b1691e09041b281a  # alinux2-x86-sbo-pcluster-v6
+  CustomAmi: ami-0c2d3681833e0908b  # alinux2-x86-sbo-pcluster-v6-2
 Tags:
   - Key: SBO_Billing
     Value: hpc:parallelcluster

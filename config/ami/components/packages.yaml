@@ -11,9 +11,9 @@ phases:
            - |
             amazon-linux-extras enable epel
             yum clean metadata
-            yum update -y
             yum install -y epel-release
             yum install -y tmux vim htop clustershell
+            yum update -y --skip-broken
   - name: test
     steps:
       - name: TestPackages

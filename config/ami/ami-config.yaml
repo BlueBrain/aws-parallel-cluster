@@ -4,6 +4,9 @@ Build:
   SubnetId: subnet-076ece71c00742d3c # compute
   SecurityGroupIds:
     - sg-0b5941ba4f4d1a9ff # sbo-poc-compute / hpc
+  Iam:
+    AdditionalIamPolicies:
+      - Policy: arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
   Components:
     - Type: arn
       Value: arn:aws:imagebuilder:us-east-1:671250183987:component/awscli/1.0.1/1
