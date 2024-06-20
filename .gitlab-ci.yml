@@ -283,7 +283,9 @@ staging_deploy:
 main_deploy:
   extends: .main_deploy
   script:
-    - bash scripts/ci/update_dns_record.sh $(cluster_name_get staging)
+    - |
+      staging_cluster=$(cluster_name_get staging)
+      bash scripts/ci/update_dns_record.sh ${staging_cluster}
     - echo "DNS updated and cluster '${staging_cluster}' is now public."
 
 main_postdeploy:
