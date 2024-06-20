@@ -162,7 +162,8 @@ image_create:
       aws ec2 create-tags --resources ${AMI_ID} --tags ${DEFAULT_CLUSTER_TAGS}
 
       pcluster describe-image --image-id ${IMAGE_ID}
-      echo "Image '${IMAGE_ID}' created successfully."
+    - echo "Use the AMI_ID='${AMI_ID}' in the ParallelCluster YAML file."
+    - echo "Image '${IMAGE_ID}' created successfully."
 
 image_debug:
   extends: .image_build
@@ -201,6 +202,7 @@ validate_yaml:
   extends: .pcluster
   rules:
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME != "main"
+    - if: $CI_COMMIT_BRANCH != "main"
   script:
     - |
       set +e  # DryRun returns 1 instead of 0
@@ -265,7 +267,11 @@ staging_deploy:
       fi
       
       pcluster describe-cluster --cluster-name ${staging_cluster}
-    - echo "Connect via 'pcluster ssh --cluster-name ${staging_cluster} -i ~/.ssh/YOURKEYHERE.pem'"
+    - |
+      head_node_ip=$(pcluster describe-cluster --cluster-name ${staging_cluster} --query headNode.privateIpAddress | tr -d '"')
+      echo -e "Connect via one of the following methods:\n" \
+              "    'pcluster ssh --cluster-name ${staging_cluster} -i ~/.ssh/YOURKEYHERE.pem'\n" \
+              "    'ssh -i ~/.ssh/YOURKEYHERE.pem ${head_node_ip}'"
     - echo "Staging ParallelCluster '${staging_cluster}' created succesfully."
 
 .main_deploy:
