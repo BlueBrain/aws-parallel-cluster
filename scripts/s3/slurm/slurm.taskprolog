@@ -57,10 +57,12 @@
   fi
 
 # Bind Lustre FSx alongside several commands within Singularity containers
-  echo "export SINGULARITY_BIND=${LUSTRE_MNT},$(which lfs),$(which lfs_migrate),$(which ldconfig)"
-  echo "export SINGULARITY_CONTAINLIBS=$(ldconfig -p |& \
-                                         grep -E "/libnl|/libefa|/libib|/librdma|/libacm|/liblustreapi|/liblnetconfig|/libyaml" | \
-                                         awk '{print $NF}' | tr '\n' ',' | sed -r "s|,$||")"
+  SINGULARITY_BIND=${LUSTRE_MNT},$(which lfs),$(which lfs_migrate),$(which ldconfig)
+  SINGULARITY_CONTAINLIBS=$(ldconfig -p |& \
+                            grep -E "/libnl|/libefa|/libib|/librdma|/libacm|/liblustreapi|/liblnetconfig|/libyaml" | \
+                            awk '{print $NF}' | tr '\n' ',' | sed -r "s|,$||")
+  echo "export SINGULARITY_BIND=${SINGULARITY_BIND}"
+  echo "export SINGULARITY_CONTAINLIBS=${SINGULARITY_CONTAINLIBS}"
 
 # BBPP154-53 + HPCTM-1782
   # If Intel MPI is loaded and not included in the Singularity list, add its libraries
