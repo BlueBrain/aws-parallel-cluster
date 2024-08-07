@@ -21,6 +21,8 @@ HeadNode:
   Iam:
     S3Access:
       - BucketName: sboinfrastructureassets
+    AdditionalIamPolicies:
+      - Policy: arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
   CustomActions:
     OnNodeConfigured:
       Sequence:
