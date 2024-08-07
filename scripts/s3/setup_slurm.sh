@@ -1,7 +1,8 @@
 #!/bin/bash
 
-SLURM_DIR=${1:-"/opt/slurm"}
-AWS_CLOUDWATCH_RETENTION=${2:-14}
+TAG=${1:-"SBO_Billing=hpc:parallelcluster"}
+SLURM_DIR=${2:-"/opt/slurm"}
+AWS_CLOUDWATCH_RETENTION=${3:-14}
 
 SLURM_SCRIPTS_DIR="${SLURM_DIR}/etc/scripts"
 SLURM_LOG_DIR="/var/log/slurm"
@@ -63,3 +64,6 @@ EOF
 # Append the new configuration file to start monitoring the jobs from SLURM
 ${AWS_CLOUDWATCH_AGENTCTL} -a append-config -m ec2 -s -c file:${SLURM_CLOUDWATCH_CONFIG} && \
     rm -f ${SLURM_CLOUDWATCH_CONFIG}
+
+# Add the proper tag for billing to ensure that the resource is tracked
+aws logs tag-log-group --log-group-name ${log_group} --tags ${TAG}
