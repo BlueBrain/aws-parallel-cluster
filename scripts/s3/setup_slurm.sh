@@ -61,9 +61,9 @@ cat > ${SLURM_CLOUDWATCH_CONFIG} << EOF
 }
 EOF
 
+# Manually create the log group with the tag for billing to ensure that the resource is tracked
+aws logs create-log-group --log-group-name ${log_group} --tags ${TAG}
+
 # Append the new configuration file to start monitoring the jobs from SLURM
 ${AWS_CLOUDWATCH_AGENTCTL} -a append-config -m ec2 -s -c file:${SLURM_CLOUDWATCH_CONFIG} && \
     rm -f ${SLURM_CLOUDWATCH_CONFIG}
-
-# Add the proper tag for billing to ensure that the resource is tracked
-aws logs tag-log-group --log-group-name ${log_group} --tags ${TAG}
