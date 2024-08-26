@@ -32,7 +32,7 @@ done
 
 # Create directory for JWKS certificate, fetch file certificate and set correct permissions
 install -d -m 0755 -o slurm -g slurm /var/spool/slurm/statesave
-sudo --user=slurm curl -o /var/spool/slurm/statesave/jwks.json https://sboauth.epfl.ch/auth/realms/SBO/protocol/openid-connect/certs
+sudo --user=slurm curl -o /var/spool/slurm/statesave/jwks.json https://openbluebrain.com/auth/realms/SBO/protocol/openid-connect/certs
 chmod 0400 /var/spool/slurm/statesave/jwks.json
 
 # Restart default services with 'slurmrestd' enabled

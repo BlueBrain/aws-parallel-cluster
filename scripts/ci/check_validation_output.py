@@ -2,7 +2,6 @@
 
 import json
 import os
-import textwrap
 
 import requests
 from furl import furl
