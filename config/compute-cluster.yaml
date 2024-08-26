@@ -36,8 +36,7 @@ HeadNode:
           Args:
             - SBO_Billing=hpc:parallelcluster
         - Script: s3://sboinfrastructureassets/scripts/setup_sshd.sh
-        # Temp. change: Disabled SLURM Rest API to prevent initialization errors in SLURM
-        # - Script: s3://sboinfrastructureassets/scripts/setup_slurmrestd_service.sh
+        - Script: s3://sboinfrastructureassets/scripts/setup_slurmrestd_service.sh
         # Temp. change: Disabled the script below due to the lack of S3-DRA setup
         # - Script: s3://sboinfrastructureassets/scripts/setup_nexus_storage_service.sh
 Scheduling:
@@ -46,11 +45,10 @@ Scheduling:
   SlurmSettings:
     EnableMemoryBasedScheduling: true
     CustomSlurmSettingsIncludeFile: s3://sboinfrastructureassets/config/slurm_extras.conf
-    # Temp. change: Disabled SLURM Database to prevent initialization errors in SLURM
-    # Database:
-    #   Uri: hpc-slurm-db.ctydazornca3.us-east-1.rds.amazonaws.com:3306
-    #   UserName: slurm_admin
-    #   PasswordSecretArn: arn:aws:secretsmanager:us-east-1:671250183987:secret:hpc_slurm_db_password-6LNuBy
+    Database:
+      Uri: hpc-slurm-db.ctydazornca3.us-east-1.rds.amazonaws.com:3306
+      UserName: slurm_admin
+      PasswordSecretArn: arn:aws:secretsmanager:us-east-1:671250183987:secret:hpc_slurm_db_password-6LNuBy
   SlurmQueues:
   - Name: debug # for testing purposes
     AllocationStrategy: lowest-price
