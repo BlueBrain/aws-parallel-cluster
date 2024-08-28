@@ -2,6 +2,7 @@ Region: us-east-1
 Image:
   Os: alinux2
   CustomAmi: ami-07373b717fc2d9514  # alinux2-x86-sbo-pcluster-v6
+# CustomS3Bucket: parallelcluster.openbluebrain.com
 Tags:
   - Key: SBO_Billing
     Value: hpc:parallelcluster
@@ -11,7 +12,7 @@ Monitoring:
       RetentionInDays: 90
       DeletionPolicy: Retain
 HeadNode:
-  InstanceType: t3.medium
+  InstanceType: t3.micro
   Networking:
     SubnetId: subnet-076ece71c00742d3c # compute
     SecurityGroups:
@@ -26,8 +27,6 @@ HeadNode:
   CustomActions:
     OnNodeConfigured:
       Sequence:
-        # Temp. change: The script below recreates Lustre FSx on EFS (see 'Efs-LustreFSxReplacement' at the bottom)
-        - Script: s3://sboinfrastructureassets/scripts/setup_lustrefsxonefs.sh
         - Script: s3://sboinfrastructureassets/scripts/setup_users.py
           Args:
             - /sbo/home/resources/users.json
@@ -58,6 +57,10 @@ Scheduling:
       - InstanceType: t3.micro
       MinCount: 0
       MaxCount: 8
+      # Temp. change: The tagging below is an attempt to tag the 'ec2::launch-templates'
+      Tags:
+        - Key: hpc:parallelcluster:resource
+          Value: debug
     Networking:
       SubnetIds:
       - subnet-076ece71c00742d3c # compute
@@ -74,6 +77,10 @@ Scheduling:
     CustomSlurmSettings:
       MaxNodes: 8
       MaxTime: 1-00:00:00
+    # Temp. change: The tagging below is an attempt to tag the 'ec2::launch-templates'
+    Tags:
+      - Key: hpc:parallelcluster:queue
+        Value: debug
   - Name: prod-mpi # for tightly coupled jobs
     AllocationStrategy: lowest-price
     ComputeResources:
