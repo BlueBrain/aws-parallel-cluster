@@ -36,7 +36,7 @@ HeadNode:
             - SBO_Billing=hpc:parallelcluster
         - Script: s3://sboinfrastructureassets/scripts/setup_sshd.sh
         - Script: s3://sboinfrastructureassets/scripts/setup_slurmrestd_service.sh
-        # Temp. change: Disabled the script below due to the lack of S3-DRA setup
+        # Temp. change: Disabled the script below, as Nexus Storage Service is going away
         # - Script: s3://sboinfrastructureassets/scripts/setup_nexus_storage_service.sh
 Scheduling:
   Scheduler: slurm
@@ -57,10 +57,6 @@ Scheduling:
       - InstanceType: t3.micro
       MinCount: 0
       MaxCount: 8
-      # Temp. change: The tagging below is an attempt to tag the 'ec2::launch-templates'
-      Tags:
-        - Key: hpc:parallelcluster:resource
-          Value: debug
     Networking:
       SubnetIds:
       - subnet-076ece71c00742d3c # compute
@@ -77,10 +73,6 @@ Scheduling:
     CustomSlurmSettings:
       MaxNodes: 8
       MaxTime: 1-00:00:00
-    # Temp. change: The tagging below is an attempt to tag the 'ec2::launch-templates'
-    Tags:
-      - Key: hpc:parallelcluster:queue
-        Value: debug
   - Name: prod-mpi # for tightly coupled jobs
     AllocationStrategy: lowest-price
     ComputeResources:
@@ -162,28 +154,24 @@ SharedStorage:
     MountDir: /sbo/home
     EfsSettings:
       FileSystemId: fs-0c2a2f3ad1b1beeca
-  # Temp. change: The EFS below mimics Lustre FSx to allow Koen to run tests without large costs
-  - Name: Efs-LustreFSxReplacement
-    StorageType: Efs
+  - Name: FsxLustre-Persistent
+    StorageType: FsxLustre
     MountDir: /sbo/data
-  # - Name: FsxLustre-Persistent
-  #   StorageType: FsxLustre
-  #   MountDir: /sbo/data
-  #   FsxLustreSettings:
-  #     DeploymentType: PERSISTENT_2
-  #     StorageCapacity: 1200  # Setup Lustre FSx for 1.2TiB (minimum allowed)
-  #     PerUnitStorageThroughput: 250  # Request a bandwidth of 250Mbps/TiB (similar to SCRATCH_2)
-  #     DataCompressionType: LZ4  # Data compression for higher-throughput between OSSs <-> OSTs
-  #     DataRepositoryAssociations:
-  #       - Name: Containers-DRA
-  #         BatchImportMetaDataOnCreate: true
-  #         DataRepositoryPath: s3://sboinfrastructureassets/containers
-  #         FileSystemPath: /containers
-  #         AutoExportPolicy: [ NEW, CHANGED, DELETED ]
-  #         AutoImportPolicy: [ NEW, CHANGED, DELETED ]
-  #       - Name: Nexus-DRA
-  #         BatchImportMetaDataOnCreate: true
-  #         DataRepositoryPath: s3://sbonexusdata
-  #         FileSystemPath: /project
-  #         AutoExportPolicy: [ NEW, CHANGED, DELETED ]
-  #         AutoImportPolicy: [ NEW, CHANGED, DELETED ]
+    FsxLustreSettings:
+      DeploymentType: PERSISTENT_2
+      StorageCapacity: 1200  # Setup Lustre FSx for 1.2TiB (minimum allowed)
+      PerUnitStorageThroughput: 250  # Request a bandwidth of 250Mbps/TiB (similar to SCRATCH_2)
+      DataCompressionType: LZ4  # Data compression for higher-throughput between OSSs <-> OSTs
+      DataRepositoryAssociations:
+        - Name: Containers-DRA
+          BatchImportMetaDataOnCreate: true
+          DataRepositoryPath: s3://sboinfrastructureassets/containers
+          FileSystemPath: /containers
+          AutoExportPolicy: [ NEW, CHANGED, DELETED ]
+          AutoImportPolicy: [ NEW, CHANGED, DELETED ]
+        - Name: Nexus-DRA
+          BatchImportMetaDataOnCreate: true
+          DataRepositoryPath: s3://sbonexusdata
+          FileSystemPath: /project
+          AutoExportPolicy: [ NEW, CHANGED, DELETED ]
+          AutoImportPolicy: [ NEW, CHANGED, DELETED ]
