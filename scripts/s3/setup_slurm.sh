@@ -2,7 +2,7 @@
 
 TAG=${1:-"SBO_Billing=hpc:parallelcluster"}
 SLURM_DIR=${2:-"/opt/slurm"}
-AWS_CLOUDWATCH_RETENTION=${3:-14}
+AWS_CLOUDWATCH_RETENTION=${3:-7}
 
 SLURM_SCRIPTS_DIR="${SLURM_DIR}/etc/scripts"
 SLURM_LOG_DIR="/var/log/slurm"

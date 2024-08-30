@@ -269,9 +269,8 @@ staging_deploy:
       pcluster describe-cluster --cluster-name ${staging_cluster}
     - |
       head_node_ip=$(pcluster describe-cluster --cluster-name ${staging_cluster} --query headNode.privateIpAddress | tr -d '"')
-      echo -e "Connect via one of the following methods:\n" \
-              "    'pcluster ssh --cluster-name ${staging_cluster} -i ~/.ssh/YOURKEYHERE.pem'\n" \
-              "    'ssh -i ~/.ssh/YOURKEYHERE.pem ${head_node_ip}'"
+      echo -e "Connect via the following method (note the ProxyJump through the AWS Bastion):\n" \
+              "    ssh -J ssh.shapes-registry.org -i ~/.ssh/YOURKEYHERE.pem ${head_node_ip}"
     - echo "Staging ParallelCluster '${staging_cluster}' created succesfully."
 
 .main_deploy:

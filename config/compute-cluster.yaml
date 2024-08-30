@@ -9,8 +9,8 @@ Tags:
 Monitoring:
   Logs:
     CloudWatch:
-      RetentionInDays: 90
-      DeletionPolicy: Retain
+      RetentionInDays: 14
+      DeletionPolicy: Delete
 HeadNode:
   InstanceType: t3.micro
   Networking:
