@@ -4,7 +4,7 @@ schemaVersion: 1.0
 parameters:
   - SingularityVersion:
       type: string
-      default: "4.1.1-1.el7"
+      default: "4.1.5"
       description: The version of singularity to install
 phases:
   - name: build
@@ -14,10 +14,12 @@ phases:
        inputs:
          commands:
            - |
-             PACKAGE="singularity-ce-{{ SingularityVersion }}.x86_64.rpm"
-             VERSION="v$(echo "{{ SingularityVersion }}" | cut -d "-" -f 1)"
+             PACKAGE="singularity-ce-{{ SingularityVersion }}.tar.gz"
+             VERSION="v{{ SingularityVersion }}"
              wget --no-verbose "https://github.com/sylabs/singularity/releases/download/${VERSION}/${PACKAGE}"
-             yum install -y ${PACKAGE}
+             dnf install -y rpm-build autoconf automake fuse3-devel glib2-devel golang libseccomp-devel libtool squashfs-tools zlib-devel
+             rpmbuild -tb singularity-ce-{{ SingularityVersion }}.tar.gz
+             dnf install -y ./rpmbuild/RPMS/x86_64/singularity-ce-{{ SingularityVersion }}-1.amzn2023.x86_64.rpm
              rm -f ${PACKAGE}
   - name: test
     steps:

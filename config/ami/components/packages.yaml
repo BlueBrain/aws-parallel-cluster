@@ -9,11 +9,16 @@ phases:
        inputs:
          commands:
            - |
-            amazon-linux-extras enable epel
-            yum clean metadata
-            yum install -y epel-release
-            yum install -y tmux vim htop clustershell
-            yum update -y --skip-broken
+            # Install the tools that we will need in the ParallelCluster
+            dnf search htop && dnf install -y htop
+            pip install ClusterShell
+
+            # Install the latest AWS CLI version
+            dnf remove -y awscli
+            wget -O "/tmp/awscliv2.zip" "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"
+            unzip /tmp/awscliv2.zip -d /tmp/awscliv2
+            /tmp/awscliv2/aws/install
+            rm -rf /tmp/awscliv2*
   - name: test
     steps:
       - name: TestPackages
@@ -21,7 +26,6 @@ phases:
         inputs:
           commands:
             - |
-             which tmux && tmux -V && \
-             which vim && vim --version | head -n1 && \
              which htop && htop --version | head -n1 && \
-             which nodeset && nodeset --version
+             which nodeset && nodeset --version && \
+             /usr/local/bin/aws --version

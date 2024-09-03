@@ -16,10 +16,10 @@ stages:
     - eval ${BEFORE_SCRIPT}
 
 .pcluster:
-  image: public.ecr.aws/parallelcluster/pcluster-api:3.9.3
+  image: public.ecr.aws/parallelcluster/pcluster-api:3.10.1
   variables:
     DEFAULT_CLUSTER_NAME: "sbo-parallelcluster-$(date +%s)"
-    DEFAULT_CLUSTER_TAGS: "Key=SBO_Billing,Value=hpc:parallelcluster"
+    DEFAULT_AMI_PREFIX: "sbo-parallelcluster-ami-al2023"
     DYNAMODB_TABLE: "sbo-parallelcluster-deployments"
     BEFORE_SCRIPT: "set -x; export AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_DEFAULT_REGION AWS_DEFAULT_OUTPUT;
                     yum install -y unzip jq;
@@ -130,6 +130,7 @@ component_delete:
         echo "[ERROR] 'VERSION' parameter is required." >&2
         exit -1
       fi
+      IMAGE_ID="${DEFAULT_AMI_PREFIX}-v${VERSION}"
     - eval ${BEFORE_SCRIPT}
 
 image_create:
@@ -137,31 +138,30 @@ image_create:
   when: manual
   timeout: 2h
   script:
+    - aws s3 sync ./scripts/s3/ami s3://sboinfrastructureassets/scripts/ami
     - |
-      IMAGE_ID=alinux2-x86-sbo-pcluster-v${VERSION}
-      pcluster build-image --image-configuration ./config/ami/ami-config.yaml --image-id ${IMAGE_ID}
+      pcluster build-image --image-configuration ./config/ami/ami-config.yaml --image-id "${IMAGE_ID}"
 
-      while [[ $(aws cloudformation describe-stacks --stack-name ${IMAGE_ID} --query 'Stacks[*].StackStatus' --output text) == *"CREATE_IN_PROGRESS"* ]]; do
+      while [[ $(aws cloudformation describe-stacks --stack-name "${IMAGE_ID}" | \
+                 jq -r ".Stacks[].StackStatus") == "CREATE_IN_PROGRESS" ]]; do
         echo "Waiting for CloudFormation stack '${IMAGE_ID}' to create the AMI..."
         sleep 20
       done
 
-      if [[ $(pcluster describe-image --image-id ${IMAGE_ID} --query 'imageBuildStatus') != *"BUILD_COMPLETE"* ]]; then
+      if [[ $(pcluster describe-image --image-id "${IMAGE_ID}" | jq -r ".imageBuildStatus") != "BUILD_COMPLETE" ]]; then
         echo "[ERROR] Image '${IMAGE_ID}' failed. Run 'image_debug' pipeline for more information." >&2
         exit -1
       fi
 
-      while [[ $(aws cloudformation describe-stacks --stack-name ${IMAGE_ID} --query 'Stacks[*].StackStatus' --output text) == *"DELETE_IN_PROGRESS"* ]]; do
+      while [[ $(aws cloudformation describe-stacks --stack-name "${IMAGE_ID}" | \
+                 jq -r ".Stacks[].StackStatus") == "DELETE_IN_PROGRESS" ]]; do
         echo "Waiting for CloudFormation stack '${IMAGE_ID}' to be deleted..."
         sleep 5
       done
-      aws cloudformation delete-stack --stack-name ${IMAGE_ID}  # Forces delete due to 'DELETE_FAILED' bug
+      aws cloudformation delete-stack --stack-name "${IMAGE_ID}"  # Forces delete due to 'DELETE_FAILED' bug
 
-      echo "Adding 'SBO_Billing' tag to '${IMAGE_ID}'..."
-      AMI_ID=$(pcluster describe-image --image-id ${IMAGE_ID} --query 'ec2AmiInfo.amiId' | tr -d '"')
-      aws ec2 create-tags --resources ${AMI_ID} --tags ${DEFAULT_CLUSTER_TAGS}
-
-      pcluster describe-image --image-id ${IMAGE_ID}
+      AMI_ID=$(pcluster describe-image --image-id "${IMAGE_ID}" | jq -r ".ec2AmiInfo.amiId")
+      pcluster describe-image --image-id "${IMAGE_ID}"
     - echo "Use the AMI_ID='${AMI_ID}' in the ParallelCluster YAML file."
     - echo "Image '${IMAGE_ID}' created successfully."
 
@@ -169,9 +169,9 @@ image_debug:
   extends: .image_build
   when: manual
   script:
-    - pcluster describe-image --image-id alinux2-x86-sbo-pcluster-v${VERSION}
-    - pcluster list-image-log-streams --image-id alinux2-x86-sbo-pcluster-v${VERSION} --query 'logStreams[*].logStreamName'
-    - pcluster get-image-log-events --image-id alinux2-x86-sbo-pcluster-v${VERSION} --log-stream-name 3.9.3/1 | tee build_log.json
+    - pcluster describe-image --image-id "${IMAGE_ID}"
+    - pcluster list-image-log-streams --image-id "${IMAGE_ID}" --query 'logStreams[*].logStreamName'
+    - pcluster get-image-log-events --image-id "${IMAGE_ID}" --log-stream-name 3.10.1/1 | tee build_log.json
   artifacts:
     paths:
       - build_log.json
@@ -181,11 +181,10 @@ image_delete:
   when: manual
   script:
     - |
-      IMAGE_ID=alinux2-x86-sbo-pcluster-v${VERSION}
-      aws cloudformation delete-stack --stack-name ${IMAGE_ID}
-      pcluster delete-image --image-id ${IMAGE_ID}
+      aws cloudformation delete-stack --stack-name "${IMAGE_ID}"
+      pcluster delete-image --image-id "${IMAGE_ID}"
 
-      until ! pcluster describe-image --image-id ${IMAGE_ID} 1>/dev/null; do
+      until ! pcluster describe-image --image-id "${IMAGE_ID}" 1>/dev/null; do
         echo "Waiting for '${IMAGE_ID}' to be deleted (status: DELETE_IN_PROGRESS)..."
         sleep 5
       done
