@@ -4,8 +4,12 @@ schemaVersion: 1.0
 parameters:
   - SingularityVersion:
       type: string
-      default: "4.1.5"
-      description: The version of singularity to install
+      default: "4.2.0"
+      description: The version of Singularity to install
+  - CrunVersion:
+      type: string
+      default: "1.16.1"
+      description: The version of Go to install as dependency
 phases:
   - name: build
     steps:
@@ -14,14 +18,58 @@ phases:
        inputs:
          commands:
            - |
-             set -e
-             PACKAGE="singularity-ce-{{ SingularityVersion }}.tar.gz"
-             VERSION="v{{ SingularityVersion }}"
-             wget --no-verbose "https://github.com/sylabs/singularity/releases/download/${VERSION}/${PACKAGE}"
-             dnf install -y rpm-build autoconf automake fuse3-devel glib2-devel golang libseccomp-devel libtool squashfs-tools zlib-devel
-             rpmbuild -tb --clean --nodebuginfo singularity-ce-{{ SingularityVersion }}.tar.gz
-             dnf install -y /rpmbuild/RPMS/x86_64/singularity-ce-{{ SingularityVersion }}-1.amzn2023.x86_64.rpm
-             rm -f ${PACKAGE} /rpmbuild
+             set -euo pipefail
+
+             # Install the necessary dependencies for Singularity
+             dnf groupinstall -y 'Development Tools'
+             dnf install -y autoconf \
+                            automake \
+                            cryptsetup \
+                            fuse \
+                            fuse3 \
+                            fuse3-devel \
+                            gcc \
+                            git \
+                            glib2-devel \
+                            glibc-static \
+                            golang \
+                            go-md2man \
+                            libcap-devel \
+                            libseccomp-devel \
+                            libtool \
+                            make \
+                            pkg-config \
+                            python \
+                            python3 \
+                            python3-libmount \
+                            squashfs-tools \
+                            systemd-devel \
+                            yajl-devel \
+                            zlib-devel
+
+             # Setup a temporary directory
+             tmpdir=$(mktemp -d) && cd ${tmpdir}
+
+             # Install crun dependency from source
+             cd ${tmpdir}
+             git clone --recurse-submodules https://github.com/containers/crun.git --branch {{ CrunVersion }}
+             cd crun
+             ./autogen.sh
+             ./configure
+             make
+             make install
+
+             # Install Singularity from source
+             cd ${tmpdir}
+             git clone --recurse-submodules https://github.com/sylabs/singularity.git --branch v{{ SingularityVersion }}
+             cd singularity
+             ./mconfig
+             make -C builddir
+             make -C builddir install
+
+             # Delete the temporary directory
+             rm -rf ${tmpdir}
+
   - name: test
     steps:
       - name: TestSingularity
