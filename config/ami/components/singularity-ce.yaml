@@ -1,75 +1,30 @@
 name: singularity-ce
-description: Install Singularity CE
+description: Install Singularity CE for running containers in ParallelCluster deployments.
 schemaVersion: 1.0
 parameters:
   - SingularityVersion:
       type: string
       default: "4.2.0"
-      description: The version of Singularity to install
-  - CrunVersion:
-      type: string
-      default: "1.16.1"
-      description: The version of Go to install as dependency
+      description: Version of Singularity to install
 phases:
   - name: build
     steps:
      - name: InstallSingularity
        action: ExecuteBash
        inputs:
-         commands:
-           - |
-             set -euo pipefail
+        commands:
+          - |
+            #!/bin/bash
+            
+            set -euo pipefail
+            
+            # Copy the RPMs to the temporary directory
+            aws s3 cp s3://sboinfrastructureassets/rpms/singularity-ce-{{ SingularityVersion }}-1.amzn2023.x86_64.rpm /tmp
+            aws s3 cp s3://sboinfrastructureassets/rpms/singularity-ce-debuginfo-{{ SingularityVersion }}-1.amzn2023.x86_64.rpm /tmp
 
-             # Install the necessary dependencies for Singularity
-             dnf groupinstall -y 'Development Tools'
-             dnf install -y autoconf \
-                            automake \
-                            cryptsetup \
-                            fuse \
-                            fuse3 \
-                            fuse3-devel \
-                            gcc \
-                            git \
-                            glib2-devel \
-                            glibc-static \
-                            golang \
-                            go-md2man \
-                            libcap-devel \
-                            libseccomp-devel \
-                            libtool \
-                            make \
-                            pkg-config \
-                            python \
-                            python3 \
-                            python3-libmount \
-                            squashfs-tools \
-                            systemd-devel \
-                            yajl-devel \
-                            zlib-devel
-
-             # Setup a temporary directory
-             tmpdir=$(mktemp -d) && cd ${tmpdir}
-
-             # Install crun dependency from source
-             cd ${tmpdir}
-             git clone --recurse-submodules https://github.com/containers/crun.git --branch {{ CrunVersion }}
-             cd crun
-             ./autogen.sh
-             ./configure
-             make
-             make install
-
-             # Install Singularity from source
-             cd ${tmpdir}
-             git clone --recurse-submodules https://github.com/sylabs/singularity.git --branch v{{ SingularityVersion }}
-             cd singularity
-             ./mconfig
-             make -C builddir
-             make -C builddir install
-
-             # Delete the temporary directory
-             rm -rf ${tmpdir}
-
+            # Install Singularity CE and its dependencies
+            dnf install -y /tmp/singularity-ce-*.rpm
+            rm -rf /tmp/singularity-ce-*.rpm
   - name: test
     steps:
       - name: TestSingularity

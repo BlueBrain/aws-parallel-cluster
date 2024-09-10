@@ -9,9 +9,10 @@ stages:
  - deploy
 
 .aws-cli:
-  image: public.ecr.aws/aws-cli/aws-cli:2.17.24
+  image: public.ecr.aws/aws-cli/aws-cli:latest
   variables:
     BEFORE_SCRIPT: "set -x; export AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_DEFAULT_REGION AWS_DEFAULT_OUTPUT"
+    DEFAULT_TAGS: "SBO_Billing=hpc:parallelcluster"
   before_script:
     - eval ${BEFORE_SCRIPT}
 
@@ -109,7 +110,7 @@ component_create:
   when: manual
   script:
     - aws s3 cp ./config/ami/components/${NAME}.yaml s3://sboinfrastructureassets/components/${NAME}.yaml
-    - aws imagebuilder create-component --name "${NAME}" --semantic-version "${VERSION}" --platform "Linux" --uri "s3://sboinfrastructureassets/components/${NAME}.yaml"
+    - aws imagebuilder create-component --name "${NAME}" --semantic-version "${VERSION}" --platform "Linux" --tags "${DEFAULT_TAGS}" --uri "s3://sboinfrastructureassets/components/${NAME}.yaml"
 
 component_delete:
   extends: .component_build
@@ -138,7 +139,6 @@ image_create:
   when: manual
   timeout: 2h
   script:
-    - aws s3 sync ./scripts/s3/ami s3://sboinfrastructureassets/scripts/ami
     - |
       pcluster build-image --image-configuration ./config/ami/ami-config.yaml --image-id "${IMAGE_ID}"
 
@@ -162,7 +162,7 @@ image_create:
 
       AMI_ID=$(pcluster describe-image --image-id "${IMAGE_ID}" | jq -r ".ec2AmiInfo.amiId")
       pcluster describe-image --image-id "${IMAGE_ID}"
-    - echo "Use the AMI_ID='${AMI_ID}' in the ParallelCluster YAML file."
+    - echo "Use AMI_ID='${AMI_ID}' in the ParallelCluster YAML file."
     - echo "Image '${IMAGE_ID}' created successfully."
 
 image_debug:

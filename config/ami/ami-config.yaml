@@ -4,16 +4,19 @@ Build:
   UpdateOsPackages:
     Enabled: true
 
-  # Customize the AMI components
+  # Customize the AMI with different components (e.g., AWS CLI, Singularity CE, ..., etc.)
   Components:
-    - Type: script
-      Value: s3://sboinfrastructureassets/scripts/ami/install_packages.sh
-    # - Type: arn
-    #   Value: arn:aws:imagebuilder:us-east-1:671250183987:component/packages/1.0.0/1
-    # - Type: arn
-    #   Value: arn:aws:imagebuilder:us-east-1:671250183987:component/singularity-ce/1.0.2/1
+    - Type: arn
+      Value: arn:aws:imagebuilder:us-east-1:671250183987:component/packages/1.0.0/1
+    - Type: arn  # See 'AdditionalIamPolicies' policy below
+      Value: arn:aws:imagebuilder:us-east-1:671250183987:component/singularity-ce/4.2.0/1
 
-  # Set the tags for the build process
+  Iam:
+    # Allow access to the RPMs repository on S3 (e.g., for Singularity CE component)
+    AdditionalIamPolicies:
+      - Policy: arn:aws:iam::671250183987:policy/SBOInfrastructureAssets_S3GetObject_RPMs
+
+  # Set the tags for the build process (e.g., EC2 instances, Image Builder Components, etc.)
   Tags:
     - Key: SBO_Billing
       Value: hpc:parallelcluster

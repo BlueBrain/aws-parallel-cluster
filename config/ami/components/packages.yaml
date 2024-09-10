@@ -1,5 +1,5 @@
 name: packages
-description: Install RPM Packages
+description: Install tools and AWS CLI for ParallelCluster deployments.
 schemaVersion: 1.0
 phases:
   - name: build
@@ -9,16 +9,20 @@ phases:
        inputs:
          commands:
            - |
-            # Install the tools that we will need in the ParallelCluster
-            dnf search htop && dnf install -y htop
-            pip install ClusterShell
+             #!/bin/bash
 
-            # Install the latest AWS CLI version
-            dnf remove -y awscli
-            wget -O "/tmp/awscliv2.zip" "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"
-            unzip /tmp/awscliv2.zip -d /tmp/awscliv2
-            /tmp/awscliv2/aws/install
-            rm -rf /tmp/awscliv2*
+             set -euo pipefail
+
+             # Install the tools that we will need in the ParallelCluster
+             dnf search htop && dnf install -y htop
+             python3 -m pip install ClusterShell
+
+             # Install the latest AWS CLI version
+             dnf remove -y awscli
+             curl https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o /tmp/awscliv2.zip
+             unzip /tmp/awscliv2.zip -d /tmp
+             /tmp/aws/install
+             rm -rf /tmp/aws*
   - name: test
     steps:
       - name: TestPackages
@@ -26,6 +30,6 @@ phases:
         inputs:
           commands:
             - |
-             which htop && htop --version | head -n1 && \
-             which nodeset && nodeset --version && \
-             /usr/local/bin/aws --version
+              which htop && htop --version | head -n1 && \
+              which nodeset && nodeset --version && \
+              which aws && aws --version
