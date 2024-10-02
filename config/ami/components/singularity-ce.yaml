@@ -31,9 +31,4 @@ phases:
         action: ExecuteBash
         inputs:
           commands:
-            - |
-              #!/bin/bash
-
-              set -euo pipefail
-              
-              which singularity && singularity --version
+            - which singularity && singularity --version

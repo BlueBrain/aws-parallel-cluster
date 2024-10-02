@@ -67,7 +67,7 @@
 # BBPP154-53 + HPCTM-1782
   # If Intel MPI is loaded and not included in the Singularity list, add its libraries
   if [[ -n ${I_MPI_ROOT} && ${SINGULARITY_CONTAINLIBS} != *${I_MPI_ROOT}* ]]; then
-    I_MPI_LIBRARIES=$(find ${I_MPI_ROOT}/lib/{,mpi} -maxdepth 1 -type "f,l" | grep -vE "debug|release" | tr '\n' ',')
+    I_MPI_LIBRARIES=$(find ${I_MPI_ROOT}/lib/release/* | tr '\n' ',')
     echo "export SINGULARITY_BIND=$(echo -n ${I_MPI_ROOT}/libfabric/lib,${I_MPI_ROOT}/etc,${SINGULARITY_BIND} | sed -r "s|(.*),$|\1|")"
     echo "export SINGULARITY_CONTAINLIBS=$(echo -n ${I_MPI_LIBRARIES}${SINGULARITY_CONTAINLIBS} | sed -r "s|(.*),$|\1|")"
     echo "export SINGULARITYENV_LD_PRELOAD=/.singularity.d/libs/libmpi.so"

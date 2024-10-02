@@ -10,13 +10,11 @@ Build:
       Value: arn:aws:imagebuilder:us-east-1:671250183987:component/packages/1.0.0/1
     - Type: arn  # See 'AdditionalIamPolicies' policy below
       Value: arn:aws:imagebuilder:us-east-1:671250183987:component/singularity-ce/4.2.0/1
-    - Type: arn
-      Value: arn:aws:imagebuilder:us-east-1:671250183987:component/configure-ami/1.0.0/1
 
   Iam:
     # Allow access to the RPMs repository on S3 (e.g., for Singularity CE component)
     AdditionalIamPolicies:
-      - Policy: arn:aws:iam::671250183987:policy/ParallelCluster_S3_GetObject_RPMs
+      - Policy: arn:aws:iam::671250183987:policy/SBOInfrastructureAssets_S3GetObject_RPMs
 
   # Set the tags for the build process (e.g., EC2 instances, Image Builder Components, etc.)
   Tags:
