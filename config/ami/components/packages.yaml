@@ -30,6 +30,10 @@ phases:
         inputs:
           commands:
             - |
+              #!/bin/bash
+
+              set -euo pipefail
+              
               which htop && htop --version | head -n1 && \
               which nodeset && nodeset --version && \
               which aws && aws --version

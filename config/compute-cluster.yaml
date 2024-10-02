@@ -1,7 +1,7 @@
 Region: us-east-1
 Image:
   Os: alinux2023
-  CustomAmi: ami-03d26a19389d226b7  # sbo-parallelcluster-ami-al2023-v1
+  CustomAmi: ami-08360af9b428e0803  # sbo-parallelcluster-ami-al2023-v1-2
 # CustomS3Bucket: parallelcluster.openbluebrain.com
 Tags:
   - Key: SBO_Billing
@@ -23,7 +23,7 @@ HeadNode:
     S3Access:
       - BucketName: sboinfrastructureassets
     AdditionalIamPolicies:
-      - Policy: arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
+      - Policy: arn:aws:iam::671250183987:policy/ParallelCluster_CloudWatch_TagLogGroup_SLURM
   CustomActions:
     OnNodeConfigured:
       Sequence:
