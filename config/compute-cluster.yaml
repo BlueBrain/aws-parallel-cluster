@@ -1,7 +1,7 @@
 Region: us-east-1
 Image:
   Os: alinux2023
-  CustomAmi: ami-08360af9b428e0803  # sbo-parallelcluster-ami-al2023-v1-2
+  CustomAmi: ami-015c38e8fb9b8265f  # sbo-parallelcluster-ami-al2023-v20241014
 # CustomS3Bucket: parallelcluster.openbluebrain.com
 Tags:
   - Key: SBO_Billing
@@ -172,7 +172,7 @@ SharedStorage:
           AutoImportPolicy: [ NEW, CHANGED, DELETED ]
         - Name: Nexus-DRA
           BatchImportMetaDataOnCreate: true
-          DataRepositoryPath: s3://sbonexusdata
+          DataRepositoryPath: s3://sbonexusdata/
           FileSystemPath: /project
           AutoExportPolicy: [ NEW, CHANGED, DELETED ]
           AutoImportPolicy: [ NEW, CHANGED, DELETED ]
