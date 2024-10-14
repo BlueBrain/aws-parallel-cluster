@@ -1,7 +1,7 @@
 Region: us-east-1
 Image:
   Os: alinux2023
-  CustomAmi: ami-03d26a19389d226b7  # sbo-parallelcluster-ami-al2023-v1
+  CustomAmi: ami-08360af9b428e0803  # sbo-parallelcluster-ami-al2023-v1-2
 # CustomS3Bucket: parallelcluster.openbluebrain.com
 Tags:
   - Key: SBO_Billing
@@ -35,7 +35,9 @@ HeadNode:
           Args:
             - SBO_Billing=hpc:parallelcluster
         - Script: s3://sboinfrastructureassets/scripts/setup_sshd.sh
-        - Script: s3://sboinfrastructureassets/scripts/setup_slurmrestd_service.sh
+        # Temp. change - Disabled SLURM REST API, as the latest AMI is missing a dependency that prevents deployments:
+        # 'slurmrestd[3688]: /opt/slurm/sbin/slurmrestd: error while loading shared libraries: libhttp_parser.so.2.9'
+        # - Script: s3://sboinfrastructureassets/scripts/setup_slurmrestd_service.sh
         # Temp. change: Disabled the script below, as Nexus Storage Service is going away
         # - Script: s3://sboinfrastructureassets/scripts/setup_nexus_storage_service.sh
 Scheduling:
