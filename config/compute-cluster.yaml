@@ -22,6 +22,7 @@ HeadNode:
   Iam:
     S3Access:
       - BucketName: sboinfrastructureassets
+      - BucketName: sbonexusdata
     AdditionalIamPolicies:
       - Policy: arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
   CustomActions:
@@ -67,6 +68,7 @@ Scheduling:
     Iam:
       S3Access:
         - BucketName: sboinfrastructureassets
+        - BucketName: sbonexusdata
     CustomActions:
       OnNodeConfigured:
         Script: s3://sboinfrastructureassets/scripts/setup_users.py
@@ -106,6 +108,7 @@ Scheduling:
     Iam:
       S3Access:
         - BucketName: sboinfrastructureassets
+        - BucketName: sbonexusdata
     CustomActions:
       OnNodeConfigured:
         Script: s3://sboinfrastructureassets/scripts/setup_users.py
@@ -143,6 +146,7 @@ Scheduling:
     Iam:
       S3Access:
         - BucketName: sboinfrastructureassets
+        - BucketName: sbonexusdata
     CustomActions:
       OnNodeConfigured:
         Script: s3://sboinfrastructureassets/scripts/setup_users.py
@@ -164,15 +168,14 @@ SharedStorage:
       StorageCapacity: 1200  # Setup Lustre FSx for 1.2TiB (minimum allowed)
       PerUnitStorageThroughput: 250  # Request a bandwidth of 250Mbps/TiB (similar to SCRATCH_2)
       DataCompressionType: LZ4  # Data compression for higher-throughput between OSSs <-> OSTs
-      # DataRepositoryAssociations:
-      #   - Name: Containers-DRA
-      #     BatchImportMetaDataOnCreate: true
-      #     DataRepositoryPath: s3://sboinfrastructureassets/containers
-      #     FileSystemPath: /containers
-      #     AutoImportPolicy: [ NEW, CHANGED, DELETED ]
-      #   - Name: Nexus-DRA
-      #     BatchImportMetaDataOnCreate: true
-      #     DataRepositoryPath: s3://sbonexusdata
-      #     FileSystemPath: /project
-      #     AutoExportPolicy: [ NEW, CHANGED, DELETED ]
-      #     AutoImportPolicy: [ NEW, CHANGED, DELETED ]
+      DataRepositoryAssociations:
+        - Name: Containers-DRA
+          BatchImportMetaDataOnCreate: true
+          DataRepositoryPath: s3://sboinfrastructureassets/containers
+          FileSystemPath: /containers
+          AutoImportPolicy: [ NEW, CHANGED, DELETED ]
+        - Name: Nexus-DRA
+          BatchImportMetaDataOnCreate: true
+          DataRepositoryPath: s3://sbonexusdata
+          FileSystemPath: /project
+          AutoImportPolicy: [ NEW, CHANGED, DELETED ]
