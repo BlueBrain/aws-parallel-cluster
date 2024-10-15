@@ -22,7 +22,6 @@ HeadNode:
   Iam:
     S3Access:
       - BucketName: sboinfrastructureassets
-      - BucketName: sbonexusdata
     AdditionalIamPolicies:
       - Policy: arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
   CustomActions:
@@ -68,7 +67,6 @@ Scheduling:
     Iam:
       S3Access:
         - BucketName: sboinfrastructureassets
-        - BucketName: sbonexusdata
     CustomActions:
       OnNodeConfigured:
         Script: s3://sboinfrastructureassets/scripts/setup_users.py
@@ -108,7 +106,6 @@ Scheduling:
     Iam:
       S3Access:
         - BucketName: sboinfrastructureassets
-        - BucketName: sbonexusdata
     CustomActions:
       OnNodeConfigured:
         Script: s3://sboinfrastructureassets/scripts/setup_users.py
@@ -146,7 +143,6 @@ Scheduling:
     Iam:
       S3Access:
         - BucketName: sboinfrastructureassets
-        - BucketName: sbonexusdata
     CustomActions:
       OnNodeConfigured:
         Script: s3://sboinfrastructureassets/scripts/setup_users.py
@@ -178,4 +174,5 @@ SharedStorage:
           BatchImportMetaDataOnCreate: true
           DataRepositoryPath: s3://sbonexusdata
           FileSystemPath: /project
+          AutoExportPolicy: [ NEW, CHANGED, DELETED ]
           AutoImportPolicy: [ NEW, CHANGED, DELETED ]
