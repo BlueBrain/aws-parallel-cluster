@@ -23,7 +23,7 @@ HeadNode:
     S3Access:
       - BucketName: sboinfrastructureassets
     AdditionalIamPolicies:
-      - Policy: arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
+      - Policy: arn:aws:iam::671250183987:policy/ParallelCluster_CloudWatch_TagLogGroup_SLURM
   CustomActions:
     OnNodeConfigured:
       Sequence:
