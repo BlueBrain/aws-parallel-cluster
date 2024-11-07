@@ -19,7 +19,7 @@ stages:
 .pcluster:
   image: public.ecr.aws/parallelcluster/pcluster-api:3.10.1
   variables:
-    PCLUSTER_VERSION: "3.11.0"
+    PCLUSTER_VERSION: "3.11.1"
     DEFAULT_CLUSTER_NAME: "sbo-parallelcluster-$(date +%s)"
     DEFAULT_AMI_PREFIX: "sbo-parallelcluster-ami-al2023"
     DEFAULT_LOG_GROUP_RETENTION: 7

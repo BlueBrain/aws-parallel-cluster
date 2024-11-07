@@ -1,7 +1,7 @@
 Region: us-east-1
 Image:
   Os: alinux2023
-  CustomAmi: ami-015c38e8fb9b8265f  # sbo-parallelcluster-ami-al2023-v20241014
+  CustomAmi: ami-042559ee751d3e522  # sbo-parallelcluster-ami-al2023-v20241106
 # CustomS3Bucket: parallelcluster.openbluebrain.com
 Tags:
   - Key: SBO_Billing
