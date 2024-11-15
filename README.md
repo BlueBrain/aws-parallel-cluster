@@ -29,11 +29,11 @@ updated:
 - When one of our components needs updating or we want to add a new component or functionality into
   the image
 
-### Update or create your components. 
+### Update or create your components.
 
 
 They are all in `./config/ami_components`. To create a new component
-it's best to start with an existing component and modify it. While there is quite some 
+it's best to start with an existing component and modify it. While there is quite some
 [documentation](https://docs.aws.amazon.com/imagebuilder/latest/userguide/toe-component-manager.html)
 on how to write component documents, it is quite hard to understand and apply for our use-case and took quite some trial and error.
 
@@ -71,3 +71,9 @@ latter depends on the former being on the desired version!
 ## Open questions
 
 If the only change is a change in e.g. `slurm.taskprolog`, the validation job does not indicate that the cluster needs to be destroyed. However, it seems like an update does not trigger the OnNodeConfigured section of `commpute-cluster.yaml`?
+
+# Funding and Acknowledgement
+
+The development of this software was supported by funding to the Blue Brain Project, a research center of the École polytechnique fédérale de Lausanne (EPFL), from the Swiss government’s ETH Board of the Swiss Federal Institutes of Technology.
+
+Copyright (c) 2024 Blue Brain Project/EPFL
